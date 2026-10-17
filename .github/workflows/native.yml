@@ -1,0 +1,84 @@
+name: Native builds
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: "11.0"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Prepare Rust
+        run: |
+          rustup update stable --no-self-update
+          rustup default stable
+          rustup component add rustfmt clippy
+      - name: Format
+        run: cargo fmt --check
+      - name: Lint
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Test
+        run: cargo test --locked
+      - name: Build
+        run: cargo build --locked --release --target '${{ matrix.target }}'
+      - name: Package
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+        run: |
+          version=$(cargo pkgid | sed 's/.*#\(.*@\)\?//')
+          archive="herdr-queue-v${version}-${TARGET}.tar.gz"
+          mkdir -p package dist
+          cp "target/${TARGET}/release/herdr-queue" LICENSE package/
+          tar -czf "dist/${archive}" -C package herdr-queue LICENSE
+          cd dist
+          if command -v shasum >/dev/null 2>&1; then
+            shasum -a 256 "$archive" > "$archive.sha256"
+          else
+            sha256sum "$archive" > "$archive.sha256"
+          fi
+      - uses: actions/upload-artifact@v7
+        with:
+          name: herdr-queue-${{ matrix.target }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Publish native binaries
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: gh release create "$RELEASE_TAG" dist/* --verify-tag --title "Herdr Queue $RELEASE_TAG" --generate-notes

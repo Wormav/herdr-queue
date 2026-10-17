@@ -9,3 +9,6 @@ dist/
 *.sqlite3*
 *.svg
 .DS_Store
+/target/
+/bin/
+/.cargo-home/

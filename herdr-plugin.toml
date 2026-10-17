@@ -1,12 +1,12 @@
 id = "herdr-drafts"
 name = "Herdr Queue"
-version = "0.1.0"
+version = "0.2.0"
 description = "Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel."
 min_herdr_version = "0.9.3"
 platforms = ["macos", "linux"]
 
 [[build]]
-command = ["uv", "sync", "--frozen", "--no-dev"]
+command = ["sh", "install.sh"]
 
 [[actions]]
 id = "open"

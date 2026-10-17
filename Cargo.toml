@@ -1,0 +1,37 @@
+[package]
+name = "herdr-queue"
+version = "0.2.0"
+edition = "2021"
+rust-version = "1.88"
+description = "Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel."
+license = "MIT"
+repository = "https://github.com/Wormav/herdr-queue"
+
+[lib]
+name = "herdr_queue"
+path = "native/src/lib.rs"
+
+[[bin]]
+name = "herdr-queue"
+path = "native/src/main.rs"
+
+[[test]]
+name = "launcher"
+path = "native/tests/launcher.rs"
+
+[dependencies]
+crossterm = "0.29"
+libc = "0.2"
+ratatui = { version = "0.30.2", default-features = false, features = ["crossterm"] }
+rusqlite = { version = "0.32.1", features = ["bundled"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+tui-textarea = { package = "ratatui-textarea", version = "0.9.3" }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"

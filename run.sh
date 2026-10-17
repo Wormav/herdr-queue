@@ -4,12 +4,13 @@ set -eu
 PROJECT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$PROJECT_DIR"
 
-if [ ! -x .venv/bin/python ]; then
-    if ! command -v uv >/dev/null 2>&1; then
-        echo "Installez uv, puis exécutez : uv sync --frozen --no-dev" >&2
-        exit 1
-    fi
-    uv sync --frozen --no-dev
+if [ -x bin/herdr-queue ]; then
+    exec bin/herdr-queue "$@"
 fi
 
-exec .venv/bin/python -m herdr_drafts "$@"
+if [ -x target/release/herdr-queue ]; then
+    exec target/release/herdr-queue "$@"
+fi
+
+sh install.sh
+exec bin/herdr-queue "$@"

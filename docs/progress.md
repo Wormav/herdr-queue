@@ -88,3 +88,10 @@
 - Les touches F et Ctrl restent des alternatives. Le rendu clavier réel dans un PTY a
   validé les flux ASCII, CSI-u Ctrl, CSI-u Cmd et les touches de fonction, avec envois simulés.
 - Validation : 87 tests réussis, Ruff et mypy sans erreur, archives reconstruites.
+
+
+## 2026-10-17 — Portage natif 0.2.0
+
+Le runtime Python/Textual est remplacé par Rust avec Ratatui 0.30.2, Crossterm 0.29 et ratatui-textarea 0.9.3. Retour visuel automatique à la ligne, souris et raccourcis Cmd conservés. Le plugin reste `herdr-drafts` et utilise la même base SQLite et les mêmes clés SHA-256 (JSON Python compatible Unicode). Les nouveaux workers réseau sont bornés et ne modifient pas les garanties contre les doubles envois ou les résultats incertains.
+
+Le lanceur télécharge un binaire natif vérifié par SHA-256 ; Python, uv et Rust ne sont pas nécessaires chez les utilisateurs d’une release. Cargo sert uniquement à construire les sources. Les tests natifs couvrent le stockage ancien, les vrais flux socketpair, les événements clavier/souris et l’installation sans runtime. Le protocole de mesure et ses limites sont dans `docs/PERFORMANCE.md`. Les notes précédentes décrivent la version Python historique.

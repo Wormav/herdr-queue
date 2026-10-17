@@ -1,8 +1,0 @@
-#picker-help { height: auto; margin: 1 0; }
-#picker-notice { height: auto; color: $warning; margin-bottom: 1; }
-#search { height: 3; border: solid $border-blurred; background: $surface; }
-#search:focus { border: solid $border; background-tint: transparent; }
-#picker-status { height: auto; max-height: 5; margin: 1 0; color: $text-muted; }
-#agents { height: 1fr; border: solid $border-blurred; background: $surface; }
-#agents:focus { border: solid $border; background-tint: transparent; }
-#picker-actions { margin-top: 1; }

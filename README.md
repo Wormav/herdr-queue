@@ -10,15 +10,20 @@ or launch it in another terminal and choose an agent from a searchable list.
 
 ## Install in Herdr
 
-You need **Herdr 0.9.3+**, **Python 3.11+**, and [uv](https://docs.astral.sh/uv/), on
-**macOS or Linux**.
+You need **Herdr 0.9.3+**, on **macOS or Linux** (Apple Silicon, Intel, or Linux ARM64).
+Queue is a native Rust executable. **Python, uv, and a Rust installation are not required.**
 
 ```sh
 herdr plugin install Wormav/herdr-queue
 ```
 
-Herdr downloads the repository and builds its Python environment. The internal plugin
-ID is **`herdr-drafts`**; use that ID in Herdr commands and keybindings.
+Herdr downloads the repository, then the installer downloads the matching native executable
+and verifies its SHA-256 checksum. The installer uses `curl`, `tar`, and `shasum` or
+`sha256sum`. Linux binaries require glibc 2.35 or newer (Ubuntu 22.04 or equivalent).
+
+The internal plugin ID is **`herdr-drafts`**; use that ID in Herdr commands and keybindings.
+Upgrading from the Python version keeps your existing drafts, unfinished text, and history.
+Close the old Queue window before opening the new version.
 
 ### Open it beside an agent
 
@@ -58,8 +63,9 @@ cd herdr-queue
 ./run.sh
 ```
 
-The launcher prepares its Python environment on the first run. Herdr must be running,
-and its CLI must be available in your `PATH`.
+The launcher downloads and verifies the native executable on the first run. Herdr must be
+running, and its CLI must be available in your `PATH`. A standalone executable is also
+available in [Releases](https://github.com/Wormav/herdr-queue/releases).
 
 Search for an agent by project, name, or type, then select it with a click or **Enter**.
 Its queue opens in the terminal where you launched the app. Use **Agents** or **Cmd+O**
@@ -83,6 +89,13 @@ Try the interface without connecting to an agent:
 ```
 
 The demo uses temporary drafts and simulates every send.
+
+## Resource use
+
+On macOS Apple Silicon, the native release used **4.77 MiB peak resident memory** in the
+two-message demo, compared with **49.69 MiB** for the previous Python version in the same
+scenario. The executable is **1.82 MiB**. These are local measurements, not a memory limit;
+large queues and longer sessions can use more. See the [benchmark method](docs/PERFORMANCE.md).
 
 ## Work with your queue
 
@@ -159,21 +172,24 @@ For a local version and storage diagnostic, run `./run.sh doctor` from a checkou
 ```sh
 git clone https://github.com/Wormav/herdr-queue.git
 cd herdr-queue
-uv sync --frozen
-uv run pytest -q
-uv run ruff check src tests
-uv run ruff format --check src tests
-uv run mypy src/herdr_drafts
-uv build
+cargo test --locked
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+HERDR_QUEUE_BUILD_FROM_SOURCE=1 sh install.sh
 ```
 
-Link a checkout to Herdr with `herdr plugin link "$PWD"`. After changing the code,
-close and reopen Queue to load it.
+Building from source requires **Rust 1.88+**, Cargo, and a C compiler for the bundled
+SQLite library. Link a checkout to Herdr with `herdr plugin link "$PWD"`. After changing
+the code, run the source installation command again, then close and reopen Queue.
 
 Tests cover persistence, agent identity changes, duplicate sends, connection failures,
-uncertain delivery, agent discovery, keyboard shortcuts, and the Textual interface.
-They use a fake Herdr server over Unix `socketpair` streams and do not contact your agents.
+uncertain delivery, agent discovery, keyboard shortcuts, native rendering, and installation
+without Python or a compiler. Transport tests use real Unix `socketpair` streams and do not
+contact your agents. Storage tests include the Python version's SQLite schema and keys.
 The [manual test checklist](docs/TESTING.md) is available in French.
+
+Native CI tests and builds macOS Apple Silicon, macOS Intel, Linux x86-64, and Linux ARM64.
+Version tags produce release archives and SHA-256 checksums for each platform.
 
 ## Uninstall
 
