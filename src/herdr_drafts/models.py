@@ -68,6 +68,15 @@ class Agent:
     target: Target
     status: str
     name: str
+    workspace_label: str = ""
+    tab_label: str = ""
+    session_label: str = ""
+
+
+@dataclass(frozen=True)
+class HerdrSession:
+    name: str
+    socket_path: str
 
 
 @dataclass(frozen=True)

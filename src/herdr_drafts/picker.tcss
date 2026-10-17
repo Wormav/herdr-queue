@@ -1,0 +1,8 @@
+#picker-help { height: auto; margin: 1 0; }
+#picker-notice { height: auto; color: #e5b567; margin-bottom: 1; }
+#search { height: 3; border: solid #405364; background: #202c37; }
+#search:focus { border: solid #69c6c5; }
+#picker-status { height: auto; max-height: 5; margin: 1 0; color: #aab9c6; }
+#agents { height: 1fr; border: solid #405364; background: #202c37; }
+#agents:focus { border: solid #69c6c5; }
+#picker-actions { margin-top: 1; }

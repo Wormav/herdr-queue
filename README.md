@@ -1,10 +1,40 @@
 # Herdr Drafts
 
-Préparez plusieurs messages à côté de votre agent, puis envoyez celui de votre choix.
+Préparez plusieurs messages pour votre agent Herdr, puis envoyez celui de votre choix.
 
-Un panneau à droite du terminal contient un éditeur multiligne et une liste de brouillons.
+Lancez l'application dans le terminal de votre choix, sélectionnez un agent Herdr, puis
+retrouvez son éditeur multiligne et sa liste de brouillons dans ce même terminal.
 Chaque message possède ses boutons **Envoyer**, **Modifier**, **Supprimer**, **↑** et **↓**.
 Le compositeur est sauvegardé à chaque changement. Les messages transmis restent dans l'historique.
+
+## Lancer depuis un autre terminal
+
+Prérequis : **macOS ou Linux**, **Herdr 0.9.3+**, **Python 3.11+** et **uv**.
+Herdr doit être lancé et sa commande `herdr` disponible dans le PATH.
+
+```sh
+/Users/jeremy/Documents/Github/herdr-drafts/run.sh
+```
+
+Depuis le dossier du plugin, utilisez simplement `./run.sh`. Le lanceur prépare son
+environnement Python au premier démarrage si nécessaire.
+
+La liste affiche le projet, le nom, le type et l'état de chaque agent. Recherchez par nom
+ou projet, puis choisissez avec un clic ou **Entrée**. Les brouillons s'ouvrent dans le
+terminal de lancement. Le bouton **Agents** ou **Ctrl+G** revient au choix d'agent en
+conservant le texte en cours. Chaque conversation garde ses propres brouillons.
+
+La liste s'actualise toutes les cinq secondes et avec **Ctrl+R**. Hors de Herdr, les sessions
+locales sont découvertes par `herdr session list --json`. Dans un terminal Herdr, la session
+héritée est utilisée. Vous pouvez choisir une session ou un socket précis :
+
+```sh
+./run.sh --session default
+./run.sh --socket /chemin/vers/herdr.sock
+```
+
+Si les brouillons de cet agent sont déjà ouverts ailleurs, fermez cette interface avec
+**Ctrl+Q**, puis sélectionnez de nouveau l'agent.
 
 ## Essayer la démo
 
@@ -14,10 +44,9 @@ Le compositeur est sauvegardé à chaque changement. Les messages transmis reste
 
 La démo fonctionne sans agent ni session Herdr. Ses envois sont simulés et ses données temporaires.
 
-## Installer dans Herdr
+## Ouvrir un panneau dans Herdr
 
-Prérequis : **macOS ou Linux**, **Herdr 0.9.3+**, **Python 3.11+** et **uv**.
-Depuis le dossier du plugin :
+Pour utiliser aussi le panneau intégré à droite de l'agent, liez le plugin depuis son dossier :
 
 ```sh
 uv sync --frozen --no-dev
@@ -58,6 +87,7 @@ Vérifiez avec `herdr config check`, puis rechargez avec `herdr server reload-co
 | Préparer un nouveau texte | **Nouveau** ou **Ctrl+N**, avec confirmation si nécessaire |
 | Retrouver les messages transmis | **Historique** |
 | Réutiliser un ancien message | **Reprendre**, puis ajouter le texte à la liste |
+| Choisir un autre agent depuis le terminal autonome | **Agents** ou **Ctrl+G** |
 | Actualiser l'état de l'agent | **Ctrl+R** |
 | Fermer en conservant les textes | **Ctrl+Q** |
 
@@ -91,8 +121,9 @@ Sans intégration native, Herdr peut aussi ne pas reconnaître un remplacement d
 ## Données locales
 
 Les textes restent dans `HERDR_PLUGIN_STATE_DIR/drafts.sqlite3`, avec un fichier SQLite privé
-et des verrous locaux. Hors du contexte plugin, le répertoire par défaut est
-`$XDG_STATE_HOME/herdr-drafts`, ou `~/.local/state/herdr-drafts`.
+et des verrous locaux. Le répertoire par défaut est
+`$XDG_STATE_HOME/herdr/plugins/herdr-drafts`, ou `~/.local/state/herdr/plugins/herdr-drafts`.
+Le terminal autonome partage ce stockage avec le panneau intégré à Herdr.
 
 ```sh
 ./run.sh doctor
@@ -117,8 +148,9 @@ uv build
 ```
 
 Les tests couvrent la persistance, les identités tardives et remplacées, les doubles envois,
-les coupures, la fragmentation, Unicode, les contrôles de terminal et l'interface avec Textual
-Pilot. Ils utilisent de vrais flux Unix `socketpair` et un faux serveur Herdr, sans modèle
+les coupures, la fragmentation, Unicode, les contrôles de terminal, la découverte des sessions,
+le choix d'agent et les interfaces avec Textual Pilot. Ils utilisent de vrais flux Unix
+`socketpair` et un faux serveur Herdr, sans modèle
 ni contact avec vos sessions existantes.
 
 La création de sockets nommés étant interdite dans l'environnement de développement utilisé,

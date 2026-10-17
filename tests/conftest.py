@@ -50,6 +50,21 @@ class FakeHerdr:
             return {"result": {"type": "agent_info", "agent": self.agent}}
         if method == "agent.list":
             return {"result": {"type": "agent_list", "agents": [self.agent]}}
+        if method == "session.snapshot":
+            return {
+                "result": {
+                    "type": "session_snapshot",
+                    "snapshot": {
+                        "version": "0.9.3",
+                        "protocol": 22,
+                        "workspaces": [{"workspace_id": "w1", "label": "Projet test"}],
+                        "tabs": [{"tab_id": "w1:t1", "label": "Développement"}],
+                        "panes": [self.agent],
+                        "layouts": [],
+                        "agents": [self.agent],
+                    },
+                }
+            }
         if method == "agent.prompt":
             self.prompt_started.set()
             self.gate.wait(3)

@@ -6,6 +6,7 @@ import json
 import socket
 import time
 from collections.abc import Callable
+from dataclasses import replace
 from pathlib import Path
 from uuid import uuid4
 
@@ -125,7 +126,13 @@ class HerdrClient:
                 [required_string(reference, key) for key in ("source", "kind", "value")]
             )
         cwd = info.get("foreground_cwd") or info.get("cwd") or ""
-        name = info.get("name") or info.get("display_agent") or info.get("agent")
+        name = (
+            info.get("name")
+            or info.get("title")
+            or info.get("terminal_title_stripped")
+            or info.get("display_agent")
+            or info.get("agent")
+        )
         if not isinstance(cwd, str) or not isinstance(name, str):
             raise HerdrError("Identité d'agent Herdr invalide.", code="invalid_response")
         target = Target(
@@ -144,10 +151,34 @@ class HerdrClient:
         return self._parse_agent(result.get("agent"))
 
     def list_agents(self) -> list[Agent]:
-        values = self.request("agent.list", {}).get("agents")
+        snapshot = json_object(self.request("session.snapshot", {}).get("snapshot"))
+        values = snapshot.get("agents")
         if not isinstance(values, list):
             raise HerdrError("Liste d'agents Herdr invalide.", code="invalid_response")
-        return [self._parse_agent(value) for value in values]
+        labels: dict[str, dict[str, str]] = {}
+        for collection, key in (("workspaces", "workspace_id"), ("tabs", "tab_id")):
+            records = snapshot.get(collection)
+            if not isinstance(records, list):
+                raise HerdrError("Contexte des agents Herdr invalide.", code="invalid_response")
+            labels[collection] = {}
+            for value in records:
+                record = json_object(value)
+                label = record.get("label")
+                if not isinstance(label, str):
+                    raise HerdrError("Nom de projet Herdr invalide.", code="invalid_response")
+                labels[collection][required_string(record, key)] = label
+        agents = []
+        for value in values:
+            agent = self._parse_agent(value)
+            info = json_object(value)
+            agents.append(
+                replace(
+                    agent,
+                    workspace_label=labels["workspaces"].get(agent.target.workspace_id, ""),
+                    tab_label=labels["tabs"].get(required_string(info, "tab_id"), ""),
+                )
+            )
+        return agents
 
     def prompt(self, pane_id: str, body: str) -> None:
         result = self.request("agent.prompt", {"target": pane_id, "text": body})

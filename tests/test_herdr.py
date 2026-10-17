@@ -9,7 +9,10 @@ def test_parses_the_installed_schema_shape(fake_herdr):
     assert agent.target.pane_id == "w1:p1"
     assert agent.target.session == '["test", "id", "s1"]'
     assert agent.status == "working"
-    assert client.list_agents() == [agent]
+    listed = client.list_agents()
+    assert len(listed) == 1
+    assert listed[0].target == agent.target
+    assert listed[0].status == agent.status
 
 
 def test_unicode_multiline_prompt_remains_literal(fake_herdr):

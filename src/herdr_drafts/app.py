@@ -123,13 +123,14 @@ class DraftCard(Vertical):
                     )
 
 
-class DraftsApp(App[None]):
+class DraftsApp(App[bool]):
     TITLE = "Herdr Drafts"
     CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding("ctrl+s", "save", "Ajouter"),
         Binding("ctrl+n", "new", "Nouveau"),
         Binding("ctrl+r", "refresh", "Actualiser", show=False),
+        Binding("ctrl+g", "agents", "Agents", show=False),
         Binding("ctrl+q", "quit", "Fermer", priority=True),
     ]
 
@@ -139,11 +140,13 @@ class DraftsApp(App[None]):
         *,
         demo: bool = False,
         panel_id: str | None = None,
+        allow_agent_switch: bool = False,
     ) -> None:
         super().__init__()
         self.service = service
         self.demo = demo
         self.panel_id = panel_id
+        self.allow_agent_switch = allow_agent_switch
         self._editing_id = service.store.composer(service.target).editing_id
         self._history = False
         self._busy = False
@@ -153,7 +156,10 @@ class DraftsApp(App[None]):
         target = self.service.target
         yield Static("Brouillons", id="title")
         label = f"{target.agent}  /  {target.pane_id}"
-        yield Static(label, id="destination", markup=False)
+        with Horizontal(id="target-line"):
+            yield Static(label, id="destination", markup=False)
+            if self.allow_agent_switch:
+                yield Button("Agents", id="switch-agent", compact=True)
         yield Static(target.cwd or "Agent sélectionné", id="directory", markup=False)
         yield Static("Démo : aucun agent connecté" if self.demo else "Connexion…", id="agent-state")
         yield Static("Écrire un message", id="composer-title")
@@ -291,6 +297,8 @@ class DraftsApp(App[None]):
             elif button_id == "history":
                 self._history = not self._history
                 await self.render_queue()
+            elif button_id == "switch-agent":
+                await self.action_agents()
             elif "-" in button_id:
                 action, draft_id = button_id.split("-", 1)
                 await self._draft_action(action, draft_id)
@@ -394,3 +402,13 @@ class DraftsApp(App[None]):
             self.notify("Attendez la confirmation de l'envoi avant de fermer.", severity="warning")
         elif self._persist_composer():
             self.exit()
+
+    async def action_agents(self) -> None:
+        if not self.allow_agent_switch:
+            return
+        if self._busy:
+            self.notify(
+                "Attendez la confirmation de l'envoi avant de changer d'agent.", severity="warning"
+            )
+        elif self._persist_composer():
+            self.exit(True)

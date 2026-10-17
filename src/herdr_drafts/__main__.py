@@ -16,8 +16,10 @@ from tempfile import TemporaryDirectory
 
 from herdr_drafts import __version__
 from herdr_drafts.app import DraftsApp
+from herdr_drafts.discovery import discover_sessions, load_agents
 from herdr_drafts.herdr import HerdrClient, HerdrError, json_object, required_string
 from herdr_drafts.models import Agent, DraftConflict, Target
+from herdr_drafts.picker import AgentPicker
 from herdr_drafts.service import DraftService
 from herdr_drafts.store import DraftStore, PanelLock
 
@@ -45,8 +47,11 @@ def state_directory(environment: Mapping[str, str]) -> Path:
         return Path(plugin_state).expanduser()
     state_home = environment.get("XDG_STATE_HOME")
     return (
-        Path(state_home).expanduser() if state_home else Path.home() / ".local/state"
-    ) / PLUGIN_ID
+        (Path(state_home).expanduser() if state_home else Path.home() / ".local/state")
+        / "herdr"
+        / "plugins"
+        / PLUGIN_ID
+    )
 
 
 def open_panel(client: HerdrClient, source: str) -> str:
@@ -118,6 +123,29 @@ def run_demo() -> None:
             store.close()
 
 
+def run_drafts(
+    client: HerdrClient,
+    target: Target,
+    directory: Path,
+    *,
+    panel_id: str | None = None,
+    allow_agent_switch: bool = False,
+) -> bool:
+    lock = PanelLock(directory, target)
+    lock.acquire()
+    try:
+        store = DraftStore(directory / "drafts.sqlite3")
+        try:
+            service = DraftService(store, client, target)
+            store.recover_inflight(service.target)
+            app = DraftsApp(service, panel_id=panel_id, allow_agent_switch=allow_agent_switch)
+            return app.run() is True
+        finally:
+            store.close()
+    finally:
+        lock.release()
+
+
 def run_panel(environment: Mapping[str, str]) -> None:
     raw = environment.get("HERDR_DRAFTS_TARGET")
     if not raw:
@@ -128,25 +156,45 @@ def run_panel(environment: Mapping[str, str]) -> None:
     socket_path = environment.get("HERDR_SOCKET_PATH")
     if socket_path != target.socket_path:
         raise ValueError("Le socket Herdr ne correspond pas à la destination enregistrée.")
-    directory = state_directory(environment)
-    lock = PanelLock(directory, target)
-    lock.acquire()
     panel_id = environment.get("HERDR_PANE_ID")
     client = HerdrClient(socket_path)
-    try:
-        store = DraftStore(directory / "drafts.sqlite3")
-        try:
-            service = DraftService(store, client, target)
-            store.recover_inflight(service.target)
-            app = DraftsApp(service, panel_id=panel_id)
-            app.run()
-        finally:
-            store.close()
-    finally:
-        lock.release()
+    run_drafts(client, target, state_directory(environment), panel_id=panel_id)
     if panel_id and panel_id != target.pane_id:
         with suppress(HerdrError):
             client.request("plugin.pane.close", {"pane_id": panel_id})
+
+
+def run_terminal(
+    environment: Mapping[str, str],
+    *,
+    session_name: str | None = None,
+    socket_path: str | None = None,
+) -> None:
+    def available_agents() -> tuple[list[Agent], list[str]]:
+        sessions = discover_sessions(
+            environment, session_name=session_name, socket_path=socket_path
+        )
+        sources = [(session, HerdrClient(session.socket_path, timeout=3)) for session in sessions]
+        return load_agents(sources)
+
+    notice = ""
+    while True:
+        chosen = AgentPicker(available_agents, notice=notice).run()
+        if chosen is None:
+            return
+        try:
+            switching = run_drafts(
+                HerdrClient(chosen.target.socket_path),
+                chosen.target,
+                state_directory(environment),
+                allow_agent_switch=True,
+            )
+        except DraftConflict as exc:
+            notice = str(exc)
+            continue
+        if not switching:
+            return
+        notice = ""
 
 
 def doctor(environment: Mapping[str, str]) -> None:
@@ -168,11 +216,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=__version__)
     parser.add_argument(
-        "command", choices=("open", "tui", "demo", "doctor"), nargs="?", default="open"
+        "command",
+        choices=("connect", "open", "tui", "demo", "doctor"),
+        nargs="?",
+        default="connect",
     )
+    connection = parser.add_mutually_exclusive_group()
+    connection.add_argument("--session", help="Limiter le choix à une session Herdr locale")
+    connection.add_argument("--socket", help="Utiliser un socket Herdr précis")
     args = parser.parse_args(argv)
+    if args.command != "connect" and (args.session or args.socket):
+        parser.error("--session et --socket s'utilisent avec connect.")
     try:
-        if args.command == "demo":
+        if args.command == "connect":
+            run_terminal(os.environ, session_name=args.session, socket_path=args.socket)
+        elif args.command == "demo":
             run_demo()
         elif args.command == "doctor":
             doctor(os.environ)

@@ -33,3 +33,19 @@
   Ruff et mypy sans erreur ; démo lancée dans un PTY et fermée avec Ctrl+Q.
 - Les trois anomalies de la revue ont été corrigées et couvertes. Aucun problème mineur différé.
 - Livraison locale conservée pour le test commun ; aucun dépôt distant ni publication créé.
+
+## Terminal autonome — 17 octobre 2026
+
+- Le lancement sans argument ouvre un sélecteur d'agents puis les brouillons dans le même
+  terminal. Les entrées `open` et `tui` conservent le panneau intégré.
+- Découverte des sessions locales avec le registre CLI Herdr ; priorité au socket hérité
+  ou explicite, et sélection d'une session possible. Les snapshots enrichissent les agents
+  avec les noms de projet, d'onglet et de session. Une session inaccessible laisse les
+  autres agents disponibles et affiche son erreur.
+- Recherche, choix explicite au clavier ou à la souris, actualisation toutes les cinq
+  secondes. Le bouton Agents et Ctrl+G sauvegardent le compositeur avant le retour au choix.
+- Le mode autonome ne crée, ne déplace et ne ferme aucun panneau Herdr. Le stockage et
+  les verrous partagent le répertoire natif `herdr/plugins/herdr-drafts`.
+- Validation : 74 tests réussis, Ruff et mypy sans erreur, archives construites avec les
+  nouveaux styles inclus. Lanceur sans argument et fermeture Ctrl+Q vérifiés dans un PTY.
+  Revue indépendante sans problème bloquant ; intégration réelle à tester hors du sandbox.
