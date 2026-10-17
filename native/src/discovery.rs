@@ -255,17 +255,14 @@ mod tests {
 
     #[test]
     fn discovery_runs_the_cli_with_session_list_json_arguments() {
-        use std::os::unix::fs::PermissionsExt;
+        // A checked-in executable avoids writable descriptors inherited by parallel spawns.
         let binary =
-            std::env::temp_dir().join(format!("herdr-registry-{}", crate::models::unique_id()));
-        std::fs::write(&binary,b"#!/bin/sh\n[ \"$1\" = session ] && [ \"$2\" = list ] && [ \"$3\" = --json ] || exit 1\nprintf '%s\\n' '{\"sessions\":[{\"name\":\"work\",\"socket_path\":\"/tmp/work.sock\",\"running\":true}]}'\n").unwrap();
-        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700)).unwrap();
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("native/tests/fixtures/herdr-sessions.sh");
         let environment = HashMap::from([(
             "HERDR_BIN_PATH".into(),
             binary.to_string_lossy().into_owned(),
         )]);
         let result = discover_sessions(&environment, Some("work"), None);
-        std::fs::remove_file(binary).unwrap();
         assert_eq!(result.unwrap()[0].socket_path, "/tmp/work.sock");
     }
 }
