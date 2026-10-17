@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal
+from textual.filter import LineFilter
 from textual.widgets import Button, Footer, Input, OptionList, Static
 from textual.widgets.option_list import Option
 
 from herdr_drafts.app import STATUS_LABELS
 from herdr_drafts.herdr import HerdrError
 from herdr_drafts.models import Agent
+from herdr_drafts.terminal_colors import TerminalDefaultColors
 
 
 class AgentPicker(App[Agent | None]):
@@ -32,13 +34,19 @@ class AgentPicker(App[Agent | None]):
         *,
         notice: str = "",
     ) -> None:
-        super().__init__()
+        super().__init__(ansi_color=True)
+        self._terminal_colors = TerminalDefaultColors()
+        self.theme = "textual-ansi"
         self.load = load
         self.notice = notice
         self._agents: list[Agent] = []
         self._visible: dict[str, Agent] = {}
         self._errors: list[str] = []
         self._loading = False
+
+    def get_line_filters(self) -> Sequence[LineFilter]:
+        filters = super().get_line_filters()
+        return [*filters, self._terminal_colors] if self.ansi_color else filters
 
     def compose(self) -> ComposeResult:
         yield Static("Agents Herdr", id="title")
@@ -57,7 +65,6 @@ class AgentPicker(App[Agent | None]):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.theme = "textual-dark"
         self.query_one("#picker-notice", Static).display = bool(self.notice)
         self.query_one("#search", Input).focus()
         self.set_interval(5, self.action_refresh)

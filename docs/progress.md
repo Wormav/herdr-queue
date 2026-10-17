@@ -49,3 +49,19 @@
 - Validation : 74 tests réussis, Ruff et mypy sans erreur, archives construites avec les
   nouveaux styles inclus. Lanceur sans argument et fermeture Ctrl+Q vérifiés dans un PTY.
   Revue indépendante sans problème bloquant ; intégration réelle à tester hors du sandbox.
+
+## Couleurs du terminal — 17 octobre 2026
+
+- Diagnostic : le thème `textual-dark` et les couleurs RVB des deux feuilles de style
+  imposaient un fond sombre malgré la palette claire du terminal.
+- Le sélecteur et les brouillons utilisent désormais `textual-ansi`, initialisé avant
+  le rendu, et les variables du thème. Les composants conservent les couleurs natives
+  au focus, dans le compositeur et dans les confirmations.
+- Textual 6.6 perd la valeur ANSI par défaut lors de certaines conversions Rich :
+  elle devient du noir RVB. Un filtre de rendu rétablit la valeur native dans cette
+  interface ANSI ; le noir explicitement choisi dans la palette ANSI reste intact.
+  Réévaluer ce contournement lors d'une mise à jour de Textual.
+- Les effets de teinte et de transparence des boutons sont désactivés : ils supposent
+  une couleur RVB connue et échouent avec le fond natif. Le focus utilise l'inversion.
+- Validation : 76 tests réussis, Ruff et mypy sans erreur. Démo et sélecteur lancés dans
+  un PTY avec une configuration Ghostty : fonds natifs, aucun fond RVB émis, sortie Ctrl+Q.

@@ -1,23 +1,29 @@
 Screen {
     layout: vertical;
-    background: #17212b;
-    color: #e4e9ee;
+    background: $background;
+    color: $foreground;
     padding: 0 1;
 }
-#title { height: 1; text-style: bold; color: #69c6c5; }
+#title { height: 1; text-style: bold; color: $secondary; }
 #target-line { height: 1; }
 #destination { height: 1; width: 1fr; text-style: bold; }
-#directory { height: 1; color: #aab9c6; }
-#agent-state { height: auto; max-height: 2; color: #e5b567; margin-bottom: 1; }
+#directory { height: 1; color: $text-muted; }
+#agent-state { height: auto; max-height: 2; color: $warning; margin-bottom: 1; }
 #composer-title { height: 1; text-style: bold; }
 #composer {
     height: 8;
     min-height: 4;
-    border: solid #405364;
-    background: #202c37;
+    border: solid $border-blurred;
+    background: $surface;
     padding: 0 1;
 }
-#composer:focus { border: solid #69c6c5; }
+#composer:focus { border: solid $border; }
+#composer .text-area--placeholder { color: $text-muted; text-style: dim; }
+#composer .text-area--cursor {
+    color: $foreground;
+    background: $background;
+    text-style: reverse;
+}
 .actions { height: 1; margin-top: 0; }
 Button {
     width: auto;
@@ -26,15 +32,22 @@ Button {
     margin-right: 1;
     padding: 0 1;
     border: none;
-    background: #304354;
-    color: #e4e9ee;
+    background: $surface;
+    color: $foreground;
+    tint: transparent;
 }
-Button:hover { background: #40576a; }
-Button:focus { text-style: bold reverse; }
-Button.-primary { background: #69c6c5; color: #17212b; }
-Button.-warning { background: #e5b567; color: #17212b; }
-Button:disabled { color: #7890a2; background: #253440; }
-#composer-hint { height: 1; color: #aab9c6; margin-bottom: 1; }
+Button:hover { text-style: reverse; }
+Button:focus { text-style: bold reverse; background-tint: transparent; }
+Button.-active { tint: transparent; }
+Button.-primary { color: $primary; }
+Button.-warning { color: $warning; }
+Button:disabled {
+    color: $text-disabled;
+    background: $surface;
+    text-style: dim;
+    text-opacity: 1;
+}
+#composer-hint { height: 1; color: $text-muted; margin-bottom: 1; }
 #queue-header { height: 1; margin-bottom: 1; }
 #queue-title { width: 1fr; height: 1; text-style: bold; }
 #queue { height: 1fr; scrollbar-size: 1 1; }
@@ -42,23 +55,23 @@ Button:disabled { color: #7890a2; background: #253440; }
     height: auto;
     padding: 0 1;
     margin-bottom: 1;
-    border-left: solid #405364;
+    border-left: solid $border-blurred;
 }
-.draft-card.uncertain { border-left: solid #e5b567; }
-.draft-card.error { border-left: solid #e28a8a; }
-.card-heading { height: 1; text-style: bold; color: #aab9c6; }
+.draft-card.uncertain { border-left: solid $warning; }
+.draft-card.error { border-left: solid $error; }
+.card-heading { height: 1; text-style: bold; color: $text-muted; }
 .preview { height: auto; max-height: 6; margin-bottom: 1; }
 .secondary-actions { margin-top: 1; }
-.message-error { height: auto; color: #e5b567; margin-bottom: 1; }
-#empty { height: auto; color: #aab9c6; padding: 1 0; }
-Footer { background: #202c37; margin-top: 1; }
-Confirm { align: center middle; background: #17212b 80%; }
+.message-error { height: auto; color: $warning; margin-bottom: 1; }
+#empty { height: auto; color: $text-muted; padding: 1 0; }
+Footer { background: $surface; margin-top: 1; }
+Confirm { align: center middle; background: $background; }
 #confirm-dialog {
     width: 90%;
     max-width: 58;
     height: auto;
     padding: 1 2;
-    border: solid #69c6c5;
-    background: #202c37;
+    border: solid $border;
+    background: $surface;
 }
 #confirm-dialog Static { height: auto; margin-bottom: 1; }

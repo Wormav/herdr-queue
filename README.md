@@ -95,6 +95,9 @@ Les boutons sont accessibles avec **Tab** et **Maj+Tab**. La souris fonctionne d
 qui transmet ses événements à Herdr. Un panneau de **36 colonnes × 24 lignes** convient aux textes
 courts ; davantage de place facilite les messages longs.
 
+Les deux écrans reprennent le fond, le texte et la palette de couleurs du terminal.
+Après une mise à jour du plugin, fermez avec **Ctrl+Q** puis relancez pour appliquer les styles.
+
 ## Envoi et reprise
 
 Le plugin utilise `agent.prompt`. **Transmis au terminal** signifie que Herdr a confirmé la

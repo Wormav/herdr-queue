@@ -4,17 +4,20 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
+from collections.abc import Sequence
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.events import Resize
+from textual.filter import LineFilter
 from textual.screen import ModalScreen
 from textual.widgets import Button, Footer, Static, TextArea
 
 from herdr_drafts.herdr import HerdrError
 from herdr_drafts.models import Draft, DraftConflict
 from herdr_drafts.service import DraftService
+from herdr_drafts.terminal_colors import TerminalDefaultColors
 
 STATUS_LABELS = {
     "working": "En cours",
@@ -142,7 +145,9 @@ class DraftsApp(App[bool]):
         panel_id: str | None = None,
         allow_agent_switch: bool = False,
     ) -> None:
-        super().__init__()
+        super().__init__(ansi_color=True)
+        self._terminal_colors = TerminalDefaultColors()
+        self.theme = "textual-ansi"
         self.service = service
         self.demo = demo
         self.panel_id = panel_id
@@ -151,6 +156,10 @@ class DraftsApp(App[bool]):
         self._history = False
         self._busy = False
         self._refreshing = False
+
+    def get_line_filters(self) -> Sequence[LineFilter]:
+        filters = super().get_line_filters()
+        return [*filters, self._terminal_colors] if self.ansi_color else filters
 
     def compose(self) -> ComposeResult:
         target = self.service.target
@@ -182,7 +191,6 @@ class DraftsApp(App[bool]):
         yield Footer()
 
     async def on_mount(self) -> None:
-        self.theme = "textual-dark"
         self._update_composer_labels()
         await self.render_queue()
         self.query_one("#composer", TextArea).focus()
