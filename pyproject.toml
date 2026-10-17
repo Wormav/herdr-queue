@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "herdr-drafts"
 version = "0.1.0"
-description = "Prepare and send several prompts beside your Herdr agent."
+description = "Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"

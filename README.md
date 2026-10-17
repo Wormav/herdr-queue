@@ -1,157 +1,164 @@
-# Herdr Drafts
+# Herdr Queue
 
-Préparez plusieurs messages pour votre agent Herdr, puis envoyez celui de votre choix.
+Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel.
 
-Lancez l'application dans le terminal de votre choix, sélectionnez un agent Herdr, puis
-retrouvez son éditeur multiligne et sa liste de brouillons dans ce même terminal.
-Chaque message possède ses boutons **Envoyer**, **Modifier**, **Supprimer**, **↑** et **↓**.
-Le compositeur est sauvegardé à chaque changement. Les messages transmis restent dans l'historique.
+Write your next prompts while your agent is working. Keep them in a list, edit or reorder
+them, then send the one you want. Open Queue beside an agent in [Herdr](https://herdr.dev),
+or launch it in another terminal and choose an agent from a searchable list.
 
-## Lancer depuis un autre terminal
+![Herdr Queue beside Codex, showing queued prompts and the terminal's native colors](docs/images/herdr-queue.png)
 
-Prérequis : **macOS ou Linux**, **Herdr 0.9.3+**, **Python 3.11+** et **uv**.
-Herdr doit être lancé et sa commande `herdr` disponible dans le PATH.
+## Install in Herdr
+
+You need **Herdr 0.9.3+**, **Python 3.11+**, and [uv](https://docs.astral.sh/uv/), on
+**macOS or Linux**.
 
 ```sh
-/Users/jeremy/Documents/Github/herdr-drafts/run.sh
+herdr plugin install Wormav/herdr-queue
 ```
 
-Depuis le dossier du plugin, utilisez simplement `./run.sh`. Le lanceur prépare son
-environnement Python au premier démarrage si nécessaire.
+Herdr downloads the repository and builds its Python environment. The internal plugin
+ID is **`herdr-drafts`**; use that ID in Herdr commands and keybindings.
 
-La liste affiche le projet, le nom, le type et l'état de chaque agent. Recherchez par nom
-ou projet, puis choisissez avec un clic ou **Entrée**. Les brouillons s'ouvrent dans le
-terminal de lancement. Le bouton **Agents**, **⌘O** sur Mac ou **Ctrl+G** revient au choix d'agent en
-conservant le texte en cours. Chaque conversation garde ses propres brouillons.
+### Open it beside an agent
 
-La liste s'actualise toutes les cinq secondes et avec **⌘R** sur Mac ou **Ctrl+R**. Hors de Herdr, les sessions
-locales sont découvertes par `herdr session list --json`. Dans un terminal Herdr, la session
-héritée est utilisée. Vous pouvez choisir une session ou un socket précis :
+Add a shortcut to `~/.config/herdr/config.toml`. This example uses **Cmd+I** on macOS;
+choose a key your terminal and Herdr do not already use.
+
+```toml
+[[keys.command]]
+key = "cmd+i"
+type = "plugin_action"
+command = "herdr-drafts.open"
+description = "Open Herdr Queue"
+```
+
+For a prefix shortcut instead, set `key = "prefix+i"`. With Herdr's default prefix,
+press **Ctrl+B**, then **I**.
+
+Validate and reload the configuration:
+
+```sh
+herdr config check
+herdr server reload-config
+```
+
+Select your **agent's terminal** in Herdr, then press the shortcut. Queue opens to its
+right, bound to that conversation. Selecting another terminal does not change the recipient.
+Installing the plugin does not add this shortcut automatically.
+
+If you already linked a local checkout, keep using it or run `herdr plugin unlink herdr-drafts`
+before switching to the GitHub installation. Herdr will not install over a local link.
+
+## Use it from another terminal
+
+```sh
+git clone https://github.com/Wormav/herdr-queue.git
+cd herdr-queue
+./run.sh
+```
+
+The launcher prepares its Python environment on the first run. Herdr must be running,
+and its CLI must be available in your `PATH`.
+
+Search for an agent by project, name, or type, then select it with a click or **Enter**.
+Its queue opens in the terminal where you launched the app. Use **Agents** or **Cmd+O**
+to switch agents; each conversation keeps its own drafts and unfinished text.
+The picker refreshes every five seconds.
+
+To select a particular local session or socket:
 
 ```sh
 ./run.sh --session default
-./run.sh --socket /chemin/vers/herdr.sock
+./run.sh --socket /path/to/herdr.sock
 ```
 
-Si les brouillons de cet agent sont déjà ouverts ailleurs, fermez cette interface avec
-**⌘L** sur Mac ou **Ctrl+Q**, puis sélectionnez de nouveau l'agent.
+Only one Queue window can own a given agent terminal at a time. Close its existing
+Queue window before opening it elsewhere. The standalone app and Herdr panel share storage.
 
-## Essayer la démo
+Try the interface without connecting to an agent:
 
 ```sh
 ./run.sh demo
 ```
 
-La démo fonctionne sans agent ni session Herdr. Ses envois sont simulés et ses données temporaires.
+The demo uses temporary drafts and simulates every send.
 
-## Ouvrir un panneau dans Herdr
+## Work with your queue
 
-Pour utiliser aussi le panneau intégré à droite de l'agent, liez le plugin depuis son dossier :
+1. Write a prompt. **Enter** adds it to the list; **Shift+Enter** inserts a new line.
+2. Prepare more prompts while your agent works. Edit, delete, or reorder them with the
+   controls on each card.
+3. Click **Envoyer** on a particular prompt, or press **Cmd+Y** to send the first one.
+4. Open **Historique** to see transmitted messages and reuse their text.
 
-```sh
-uv sync --frozen --no-dev
-herdr plugin link "$PWD"
+The interface currently uses French labels. **Ajouter à la liste** means “Add to queue,”
+**Envoyer** means “Send,” and **Historique** means “History.” It follows your terminal's
+background, text colors, and ANSI palette.
+
+### Keyboard shortcuts
+
+| Action | macOS | Other keys |
+| --- | --- | --- |
+| Add a draft / save an edit | Enter or **Cmd+U** | Enter, Ctrl+S, or F2 |
+| Insert a new line | Shift+Enter | Shift+Enter or Ctrl+J |
+| Send the first queued prompt | **Cmd+Y** | Ctrl+T or F8 |
+| Start a new draft | Cmd+P | Ctrl+N or F4 |
+| Choose another agent (standalone) | Cmd+O | Ctrl+G or F3 |
+| Refresh | Cmd+R | Ctrl+R or F5 |
+| Close and keep drafts | Cmd+L | Ctrl+Q or F10 |
+
+Cmd shortcuts require a terminal that forwards them through the Kitty keyboard protocol.
+Terminal and Herdr shortcuts take precedence; the letters above avoid the bindings in
+our Ghostty/Herdr development setup. On Mac keyboards, function keys may require **fn**.
+Buttons are also accessible with **Tab** and **Shift+Tab**.
+
+Sending the first prompt follows the queue's current order and keeps unfinished text in
+the editor. It sends one prompt per activation. A prompt being edited, an unresolved send,
+or an active transmission blocks this shortcut. It is inactive in history and confirmation dialogs.
+
+## Sending and recovery
+
+Sending is manual. Herdr Queue submits text through Herdr's `agent.prompt` API.
+**Transmis au terminal** means Herdr confirmed submission to the terminal; it does not
+mean the agent has processed the prompt. Your CLI decides whether a message received
+during a run is queued or used to steer the current task. Check that behavior with your
+versions of Codex, Claude Code, or Antigravity.
+
+If an agent needs an interactive response or its status is unknown, sending is refused
+and the draft is kept. Answer the agent in its terminal, then retry.
+
+If a connection drops during submission, the draft becomes **Envoi à vérifier** (“Check
+delivery”). Inspect the agent's terminal, then mark it **Déjà transmis** (“Already sent”)
+or **Remettre en brouillon** (“Return to drafts”). Returning it to drafts does not send it.
+There is no automatic retry or queue draining.
+
+Drafts stay tied to the selected agent and conversation. If the conversation is replaced,
+close Queue and reopen it for the new conversation. The old drafts remain stored separately.
+
+## Local storage
+
+Drafts and unfinished text are saved in a local SQLite database at:
+
+```text
+$XDG_STATE_HOME/herdr/plugins/herdr-drafts/drafts.sqlite3
 ```
 
-Sélectionnez ensuite le panneau de votre agent dans Herdr et invoquez l'action
-**Ouvrir les brouillons**, ou exécutez depuis un terminal dans Herdr :
+The default is `~/.local/state/herdr/plugins/herdr-drafts/drafts.sqlite3`.
+`HERDR_PLUGIN_STATE_DIR` overrides the directory when supplied by Herdr.
+Close Queue before copying the database, or use SQLite's backup API to include active WAL data.
+
+Herdr Queue does not call a model, start an HTTP server, or interpret prompts as shell commands.
+Each prompt is limited to **64 KiB of UTF-8 text**. Terminal control characters are rejected,
+except for new lines and tabs.
+
+For a local version and storage diagnostic, run `./run.sh doctor` from a checkout.
+
+## Development
 
 ```sh
-herdr plugin action invoke herdr-drafts.open
-```
-
-L'action reprend un panneau déjà ouvert pour la même conversation. Le destinataire apparaît
-en haut et reste lié au panneau source : changer de focus ne change pas la cible.
-Si la conversation est remplacée, fermez son ancien panneau de brouillons avec **Ctrl+Q**,
-puis rouvrez l'action. Les textes de l'ancienne conversation restent conservés.
-
-Pour ajouter un raccourci, choisissez une touche libre dans la configuration Herdr :
-
-```toml
-[[keys.command]]
-key = "prefix+b"
-type = "plugin_action"
-command = "herdr-drafts.open"
-description = "ouvrir les brouillons"
-```
-
-Vérifiez avec `herdr config check`, puis rechargez avec `herdr server reload-config`.
-
-## Utilisation
-
-| Action | Souris ou clavier |
-| --- | --- |
-| Écrire plusieurs lignes | **Maj+Entrée** ou **Ctrl+J** |
-| Ajouter ou enregistrer une modification | **Entrée**, **⌘U** sur Mac, **F2** ou **Ctrl+S** |
-| Envoyer un message précis | **Envoyer** sur ce message |
-| Envoyer le premier message de la liste | **⌘Y** sur Mac, **F8** ou **Ctrl+T** |
-| Préparer un nouveau texte | **Nouveau**, **⌘P** sur Mac, **F4** ou **Ctrl+N** |
-| Retrouver les messages transmis | **Historique** |
-| Réutiliser un ancien message | **Reprendre**, puis ajouter le texte à la liste |
-| Choisir un autre agent depuis le terminal autonome | **Agents**, **⌘O** sur Mac, **F3** ou **Ctrl+G** |
-| Actualiser l'état de l'agent | **⌘R** sur Mac, **F5** ou **Ctrl+R** |
-| Fermer en conservant les textes | **⌘L** sur Mac, **F10** ou **Ctrl+Q** |
-
-Les raccourcis Mac utilisent la touche **Cmd (⌘)**. Les lettres U, Y, L, P, O et R évitent
-les raccourcis déjà réservés par la configuration Ghostty et Herdr vérifiée sur ce Mac.
-Le terminal doit transmettre les touches Cmd avec le protocole clavier Kitty.
-Les touches F restent disponibles, avec **fn** si le clavier les utilise pour le son ou la luminosité.
-
-L'envoi du suivant suit l'ordre affiché, conserve le texte du compositeur et transmet un
-seul message par activation. Un premier message en cours de modification ou avec un envoi
-à vérifier bloque le raccourci. Les confirmations et l'historique ne déclenchent pas cet envoi.
-
-Les boutons sont accessibles avec **Tab** et **Maj+Tab**. La souris fonctionne dans un terminal
-qui transmet ses événements à Herdr. Un panneau de **36 colonnes × 24 lignes** convient aux textes
-courts ; davantage de place facilite les messages longs.
-
-Les deux écrans reprennent le fond, le texte et la palette de couleurs du terminal.
-Après une mise à jour du plugin, cliquez sur **Fermer** dans la barre du bas, puis relancez.
-
-## Envoi et reprise
-
-Le plugin utilise `agent.prompt`. **Transmis au terminal** signifie que Herdr a confirmé la
-soumission du texte ; cela ne prouve pas que l'agent l'a traité. Pendant une exécution, le CLI
-décide s'il met le message en attente ou l'utilise pour orienter son travail. Le comportement
-de vos versions de Codex, Claude Code et Antigravity reste à vérifier en session réelle.
-
-Un agent bloqué ou dont l'état est inconnu ne reçoit pas de texte. Répondez à sa demande
-interactive dans son terminal, puis réessayez. Un refus certain conserve le brouillon.
-
-Après une coupure pendant l'envoi ou un arrêt brutal, le message porte le statut
-**Envoi à vérifier**. Regardez dans le terminal, puis choisissez **Déjà transmis** pour le classer,
-ou **Remettre en brouillon** après avoir vérifié son absence. Cette dernière action ne l'envoie pas.
-Aucun renvoi automatique. Les doubles clics et deux panneaux concurrents ne peuvent pas réclamer
-simultanément le même brouillon.
-
-La cible comprend le socket, le terminal, le panneau, l'espace de travail, le type d'agent,
-le répertoire et la référence de conversation disponible. La première référence native tardive
-est mémorisée pour retrouver les textes après fermeture ou restauration du panneau.
-Herdr 0.9.3 ne permet pas de joindre une identité attendue atomiquement à `agent.prompt` : une
-petite course reste possible si un autre client remplace l'agent entre vérification et envoi.
-Sans intégration native, Herdr peut aussi ne pas reconnaître un remplacement de conversation.
-
-## Données locales
-
-Les textes restent dans `HERDR_PLUGIN_STATE_DIR/drafts.sqlite3`, avec un fichier SQLite privé
-et des verrous locaux. Le répertoire par défaut est
-`$XDG_STATE_HOME/herdr/plugins/herdr-drafts`, ou `~/.local/state/herdr/plugins/herdr-drafts`.
-Le terminal autonome partage ce stockage avec le panneau intégré à Herdr.
-
-```sh
-./run.sh doctor
-```
-
-Ce diagnostic affiche les versions et le chemin sans contacter une conversation. Aucune
-télémétrie, requête de modèle ni service HTTP. Les prompts restent du texte littéral sans
-interprétation par un shell. Limite : **64 Kio UTF-8** par message. Les caractères de contrôle
-sont refusés, sauf les nouvelles lignes et tabulations.
-Pour sauvegarder une base active, utilisez l'API de sauvegarde SQLite ou fermez tous les
-panneaux avant de copier le fichier : SQLite peut utiliser des fichiers WAL annexes.
-
-## Développement
-
-```sh
+git clone https://github.com/Wormav/herdr-queue.git
+cd herdr-queue
 uv sync --frozen
 uv run pytest -q
 uv run ruff check src tests
@@ -160,16 +167,23 @@ uv run mypy src/herdr_drafts
 uv build
 ```
 
-Les tests couvrent la persistance, les identités tardives et remplacées, les doubles envois,
-les coupures, la fragmentation, Unicode, les contrôles de terminal, la découverte des sessions,
-le choix d'agent et les interfaces avec Textual Pilot. Ils utilisent de vrais flux Unix
-`socketpair` et un faux serveur Herdr, sans modèle
-ni contact avec vos sessions existantes.
+Link a checkout to Herdr with `herdr plugin link "$PWD"`. After changing the code,
+close and reopen Queue to load it.
 
-La création de sockets nommés étant interdite dans l'environnement de développement utilisé,
-le lancement dans une session Herdr réelle reste à valider. Voir [le parcours de test](docs/TESTING.md).
+Tests cover persistence, agent identity changes, duplicate sends, connection failures,
+uncertain delivery, agent discovery, keyboard shortcuts, and the Textual interface.
+They use a fake Herdr server over Unix `socketpair` streams and do not contact your agents.
+The [manual test checklist](docs/TESTING.md) is available in French.
 
-## Retirer le plugin
+## Uninstall
 
-Fermez ses panneaux, puis exécutez `herdr plugin unlink herdr-drafts`.
-Votre configuration et vos brouillons restent disponibles. Licence MIT.
+```sh
+herdr plugin uninstall herdr-drafts
+```
+
+For a linked checkout, use `herdr plugin unlink herdr-drafts` instead.
+Local drafts and your Herdr keybinding configuration are kept.
+
+## License
+
+[MIT](LICENSE).

@@ -138,7 +138,7 @@ class DraftCard(Vertical):
 
 
 class DraftsApp(App[bool]):
-    TITLE = "Herdr Drafts"
+    TITLE = "Herdr Queue"
     CSS_PATH = "app.tcss"
     BINDINGS = [
         Binding(

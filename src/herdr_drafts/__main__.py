@@ -202,7 +202,7 @@ def doctor(environment: Mapping[str, str]) -> None:
     result = subprocess.run([binary, "--version"], capture_output=True, text=True, timeout=5)
     if result.returncode:
         raise ValueError("Herdr n'a pas pu communiquer sa version.")
-    print(f"Herdr Drafts {__version__}")
+    print(f"Herdr Queue {__version__}")
     print(result.stdout.strip())
     print(f"Python {sys.version.split()[0]} / Textual {version('textual')}")
     print(f"Contexte Herdr : {'oui' if environment.get('HERDR_ENV') == '1' else 'non'}")
@@ -244,7 +244,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             pane_id = open_panel(HerdrClient(socket_path), source)
             print(f"Brouillons ouverts : {pane_id}")
     except (OSError, ValueError, HerdrError, sqlite3.Error, subprocess.SubprocessError) as exc:
-        print(f"Herdr Drafts : {exc}", file=sys.stderr)
+        print(f"Herdr Queue : {exc}", file=sys.stderr)
         return 1
     return 0
 
