@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from collections.abc import Callable, Sequence
 
 from textual.app import App, ComposeResult
@@ -22,9 +23,28 @@ class AgentPicker(App[Agent | None]):
     TITLE = "Choisir un agent Herdr"
     CSS_PATH = ["app.tcss", "picker.tcss"]
     BINDINGS = [
-        Binding("ctrl+q,escape", "quit", "Fermer", priority=True),
-        Binding("ctrl+r", "refresh", "Actualiser"),
-        Binding("ctrl+f", "search", "Rechercher"),
+        Binding(
+            "super+r",
+            "refresh",
+            "Actualiser",
+            key_display="⌘R",
+            show=sys.platform == "darwin",
+            priority=True,
+        ),
+        Binding(
+            "super+l",
+            "quit",
+            "Fermer",
+            key_display="⌘L",
+            show=sys.platform == "darwin",
+            priority=True,
+        ),
+        Binding("super+o", "search", "Rechercher", show=False, priority=True),
+        Binding("f5", "refresh", "Actualiser", show=sys.platform != "darwin", priority=True),
+        Binding("f10", "quit", "Fermer", show=sys.platform != "darwin", priority=True),
+        Binding("ctrl+q,escape", "quit", "Fermer", show=False, priority=True),
+        Binding("ctrl+r", "refresh", "Actualiser", show=False, priority=True),
+        Binding("ctrl+f,f2", "search", "Rechercher", show=False, priority=True),
         Binding("down", "focus_agents", show=False),
     ]
 

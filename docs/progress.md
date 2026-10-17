@@ -74,3 +74,17 @@
   leur navigation au clavier. L'ajout réutilise la sauvegarde existante et ne transmet
   aucun prompt à l'agent.
 - Validation : 77 tests réussis, Ruff et mypy sans erreur, archives reconstruites.
+
+## Raccourcis Cmd et message suivant — 17 octobre 2026
+
+- Les raccourcis Mac demandés utilisent Cmd : ⌘U ajoute, ⌘Y transmet le premier message,
+  ⌘L ferme, ⌘P prépare un nouveau texte, ⌘O choisit l'agent et ⌘R actualise.
+- Ces lettres sont libres dans les bindings par défaut de Ghostty 1.3.1 et dans les
+  fichiers de configuration Ghostty/Herdr consultés. Cmd+S et Cmd+N y sont déjà réservés.
+  Les raccourcis restent dans le terminal de lancement et apparaissent dans le pied de page.
+- L'action « suivant » suit l'ordre de la liste, conserve le compositeur, attend la fin
+  d'un envoi et bloque sur un premier message incertain ou en cours de modification.
+  Elle reste inactive dans l'historique et pendant une confirmation.
+- Les touches F et Ctrl restent des alternatives. Le rendu clavier réel dans un PTY a
+  validé les flux ASCII, CSI-u Ctrl, CSI-u Cmd et les touches de fonction, avec envois simulés.
+- Validation : 87 tests réussis, Ruff et mypy sans erreur, archives reconstruites.

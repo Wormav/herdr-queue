@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
+import sys
 from collections.abc import Sequence
 
 from textual.app import App, ComposeResult
@@ -31,7 +32,7 @@ STATUS_LABELS = {
 class DraftComposer(TextArea):
     BINDINGS = [
         Binding("enter", "app.save", "Ajouter", show=False, priority=True),
-        Binding("shift+enter", "newline", "Nouvelle ligne", show=False, priority=True),
+        Binding("shift+enter,ctrl+j", "newline", "Nouvelle ligne", show=False, priority=True),
     ]
 
     def action_newline(self) -> None:
@@ -140,11 +141,42 @@ class DraftsApp(App[bool]):
     TITLE = "Herdr Drafts"
     CSS_PATH = "app.tcss"
     BINDINGS = [
-        Binding("ctrl+s", "save", "Ajouter"),
-        Binding("ctrl+n", "new", "Nouveau"),
-        Binding("ctrl+r", "refresh", "Actualiser", show=False),
-        Binding("ctrl+g", "agents", "Agents", show=False),
-        Binding("ctrl+q", "quit", "Fermer", priority=True),
+        Binding(
+            "super+u",
+            "save",
+            "Ajouter",
+            key_display="⌘U",
+            show=sys.platform == "darwin",
+            priority=True,
+        ),
+        Binding(
+            "super+y",
+            "send_next",
+            "Suivant",
+            key_display="⌘Y",
+            show=sys.platform == "darwin",
+            priority=True,
+        ),
+        Binding(
+            "super+l",
+            "quit",
+            "Fermer",
+            key_display="⌘L",
+            show=sys.platform == "darwin",
+            priority=True,
+        ),
+        Binding("super+p", "new", "Nouveau", show=False, priority=True),
+        Binding("super+o", "agents", "Agents", show=False, priority=True),
+        Binding("super+r", "refresh", "Actualiser", show=False, priority=True),
+        Binding("f2", "save", "Ajouter", show=sys.platform != "darwin", priority=True),
+        Binding("f8", "send_next", "Suivant", show=sys.platform != "darwin", priority=True),
+        Binding("f10", "quit", "Fermer", show=sys.platform != "darwin", priority=True),
+        Binding("ctrl+s", "save", "Ajouter", show=False, priority=True),
+        Binding("ctrl+n,f4", "new", "Nouveau", show=False, priority=True),
+        Binding("ctrl+r,f5", "refresh", "Actualiser", show=False, priority=True),
+        Binding("ctrl+g,f3", "agents", "Agents", show=False, priority=True),
+        Binding("ctrl+t", "send_next", "Suivant", show=False, priority=True),
+        Binding("ctrl+q", "quit", "Fermer", show=False, priority=True),
     ]
 
     def __init__(
@@ -287,6 +319,27 @@ class DraftsApp(App[bool]):
         self._history = False
         await self.render_queue()
         self.query_one("#composer", TextArea).focus()
+
+    async def action_send_next(self) -> None:
+        if self._busy or self._history or isinstance(self.screen, ModalScreen):
+            return
+        try:
+            drafts = self.service.store.list_drafts(self.service.target)
+            if not drafts:
+                self.notify("La liste est vide.")
+                return
+            first = drafts[0]
+            if first.id == self._editing_id:
+                self.notify(
+                    "Enregistrez d'abord la modification du premier message.", severity="warning"
+                )
+                return
+            if first.state not in ("draft", "error"):
+                self.notify("Vérifiez d'abord l'envoi du premier message.", severity="warning")
+                return
+            await self._draft_action("send", first.id)
+        except (ValueError, sqlite3.Error) as exc:
+            self.notify(str(exc), severity="error")
 
     async def action_new(self) -> None:
         if self.query_one("#composer", TextArea).text:

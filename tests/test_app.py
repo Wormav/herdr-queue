@@ -69,6 +69,93 @@ async def test_enter_adds_messages_to_the_list_without_sending_them(app, fake_he
         assert fake_herdr.prompts == []
 
 
+@pytest.mark.parametrize("shortcut", ["f2", "super+u"])
+async def test_save_shortcut_adds_a_message_from_the_editor(app, fake_herdr, shortcut):
+    async with app.run_test() as pilot:
+        await pilot.press("b", "o", "n", "j", "o", "u", "r", shortcut)
+        await pilot.pause()
+        assert [draft.body for draft in app.service.store.list_drafts(app.service.target)] == [
+            "bonjour"
+        ]
+        assert fake_herdr.prompts == []
+
+
+@pytest.mark.parametrize("shortcut", ["f8", "ctrl+t", "super+y"])
+async def test_send_next_uses_queue_order_and_keeps_the_composer(app, fake_herdr, shortcut):
+    async with app.run_test(size=(60, 50)) as pilot:
+        await add_message(app, pilot, "premier")
+        await add_message(app, pilot, "deuxième")
+        second = app.service.store.list_drafts(app.service.target)[1]
+        app.service.store.move(second.id, -1)
+        app.query_one("#composer", TextArea).load_text("encore en cours")
+        await pilot.pause()
+        await pilot.press(shortcut)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert fake_herdr.prompts == ["deuxième"]
+        assert [draft.body for draft in app.service.store.list_drafts(app.service.target)] == [
+            "premier"
+        ]
+        assert app.query_one("#composer", TextArea).text == "encore en cours"
+        assert app.service.store.composer(app.service.target).body == "encore en cours"
+
+
+async def test_send_next_does_not_skip_a_message_with_an_uncertain_delivery(app, fake_herdr):
+    fake_herdr.drop_prompt = True
+    async with app.run_test(size=(60, 50)) as pilot:
+        await add_message(app, pilot, "premier")
+        await add_message(app, pilot, "deuxième")
+        first = app.service.store.list_drafts(app.service.target)[0]
+        await pilot.click(f"#send-{first.id}")
+        await app.workers.wait_for_complete()
+        assert app.service.store.get(first.id).state == "uncertain"
+        await pilot.press("f8")
+        await app.workers.wait_for_complete()
+        assert fake_herdr.prompts == ["premier"]
+        assert app.service.store.list_drafts(app.service.target)[1].state == "draft"
+
+
+async def test_send_next_waits_for_the_first_delivery_before_accepting_another(app, fake_herdr):
+    import asyncio
+
+    async with app.run_test(size=(60, 50)) as pilot:
+        await add_message(app, pilot, "premier")
+        await add_message(app, pilot, "deuxième")
+        fake_herdr.gate.clear()
+        try:
+            await pilot.press("f8")
+            assert await asyncio.to_thread(fake_herdr.prompt_started.wait, 1)
+            await pilot.press("f8", "ctrl+t")
+        finally:
+            fake_herdr.gate.set()
+        await app.workers.wait_for_complete()
+        assert fake_herdr.prompts == ["premier"]
+
+
+async def test_send_next_does_not_send_a_draft_that_is_being_edited(app, fake_herdr):
+    async with app.run_test(size=(60, 50)) as pilot:
+        await add_message(app, pilot, "original")
+        first = app.service.store.list_drafts(app.service.target)[0]
+        await pilot.click(f"#edit-{first.id}")
+        app.query_one("#composer", TextArea).load_text("modification en cours")
+        await pilot.press("f8")
+        await app.workers.wait_for_complete()
+        assert fake_herdr.prompts == []
+        assert app.service.store.get(first.id).state == "draft"
+
+
+@pytest.mark.parametrize("view", ["history", "confirmation"])
+async def test_send_next_is_inactive_in_history_and_confirmation_dialogs(app, fake_herdr, view):
+    async with app.run_test(size=(60, 50)) as pilot:
+        await add_message(app, pilot, "message")
+        first = app.service.store.list_drafts(app.service.target)[0]
+        await pilot.click("#history" if view == "history" else f"#delete-{first.id}")
+        await pilot.press("super+y")
+        await app.workers.wait_for_complete()
+        assert fake_herdr.prompts == []
+        assert app.service.store.get(first.id).state == "draft"
+
+
 async def test_edit_and_reorder_with_mouse(app):
     async with app.run_test(size=(60, 50)) as pilot:
         await add_message(app, pilot, "premier")

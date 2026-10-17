@@ -21,10 +21,10 @@ environnement Python au premier démarrage si nécessaire.
 
 La liste affiche le projet, le nom, le type et l'état de chaque agent. Recherchez par nom
 ou projet, puis choisissez avec un clic ou **Entrée**. Les brouillons s'ouvrent dans le
-terminal de lancement. Le bouton **Agents** ou **Ctrl+G** revient au choix d'agent en
+terminal de lancement. Le bouton **Agents**, **⌘O** sur Mac ou **Ctrl+G** revient au choix d'agent en
 conservant le texte en cours. Chaque conversation garde ses propres brouillons.
 
-La liste s'actualise toutes les cinq secondes et avec **Ctrl+R**. Hors de Herdr, les sessions
+La liste s'actualise toutes les cinq secondes et avec **⌘R** sur Mac ou **Ctrl+R**. Hors de Herdr, les sessions
 locales sont découvertes par `herdr session list --json`. Dans un terminal Herdr, la session
 héritée est utilisée. Vous pouvez choisir une session ou un socket précis :
 
@@ -34,7 +34,7 @@ héritée est utilisée. Vous pouvez choisir une session ou un socket précis :
 ```
 
 Si les brouillons de cet agent sont déjà ouverts ailleurs, fermez cette interface avec
-**Ctrl+Q**, puis sélectionnez de nouveau l'agent.
+**⌘L** sur Mac ou **Ctrl+Q**, puis sélectionnez de nouveau l'agent.
 
 ## Essayer la démo
 
@@ -81,22 +81,32 @@ Vérifiez avec `herdr config check`, puis rechargez avec `herdr server reload-co
 
 | Action | Souris ou clavier |
 | --- | --- |
-| Écrire plusieurs lignes | **Maj+Entrée** insère une nouvelle ligne |
-| Ajouter ou enregistrer une modification | **Entrée** dans l'éditeur, bouton principal ou **Ctrl+S** |
+| Écrire plusieurs lignes | **Maj+Entrée** ou **Ctrl+J** |
+| Ajouter ou enregistrer une modification | **Entrée**, **⌘U** sur Mac, **F2** ou **Ctrl+S** |
 | Envoyer un message précis | **Envoyer** sur ce message |
-| Préparer un nouveau texte | **Nouveau** ou **Ctrl+N**, avec confirmation si nécessaire |
+| Envoyer le premier message de la liste | **⌘Y** sur Mac, **F8** ou **Ctrl+T** |
+| Préparer un nouveau texte | **Nouveau**, **⌘P** sur Mac, **F4** ou **Ctrl+N** |
 | Retrouver les messages transmis | **Historique** |
 | Réutiliser un ancien message | **Reprendre**, puis ajouter le texte à la liste |
-| Choisir un autre agent depuis le terminal autonome | **Agents** ou **Ctrl+G** |
-| Actualiser l'état de l'agent | **Ctrl+R** |
-| Fermer en conservant les textes | **Ctrl+Q** |
+| Choisir un autre agent depuis le terminal autonome | **Agents**, **⌘O** sur Mac, **F3** ou **Ctrl+G** |
+| Actualiser l'état de l'agent | **⌘R** sur Mac, **F5** ou **Ctrl+R** |
+| Fermer en conservant les textes | **⌘L** sur Mac, **F10** ou **Ctrl+Q** |
+
+Les raccourcis Mac utilisent la touche **Cmd (⌘)**. Les lettres U, Y, L, P, O et R évitent
+les raccourcis déjà réservés par la configuration Ghostty et Herdr vérifiée sur ce Mac.
+Le terminal doit transmettre les touches Cmd avec le protocole clavier Kitty.
+Les touches F restent disponibles, avec **fn** si le clavier les utilise pour le son ou la luminosité.
+
+L'envoi du suivant suit l'ordre affiché, conserve le texte du compositeur et transmet un
+seul message par activation. Un premier message en cours de modification ou avec un envoi
+à vérifier bloque le raccourci. Les confirmations et l'historique ne déclenchent pas cet envoi.
 
 Les boutons sont accessibles avec **Tab** et **Maj+Tab**. La souris fonctionne dans un terminal
 qui transmet ses événements à Herdr. Un panneau de **36 colonnes × 24 lignes** convient aux textes
 courts ; davantage de place facilite les messages longs.
 
 Les deux écrans reprennent le fond, le texte et la palette de couleurs du terminal.
-Après une mise à jour du plugin, fermez avec **Ctrl+Q** puis relancez pour appliquer les styles.
+Après une mise à jour du plugin, cliquez sur **Fermer** dans la barre du bas, puis relancez.
 
 ## Envoi et reprise
 

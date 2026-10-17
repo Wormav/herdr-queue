@@ -4,7 +4,7 @@ Ce parcours utilise une conversation de test choisie explicitement. Les tests au
 n'ont pas validé le comportement de vos versions de CLI pendant leur exécution.
 
 1. Lancer `./run.sh demo`. Ajouter deux messages, les réordonner, modifier le second,
-   envoyer uniquement celui-ci, puis le retrouver dans l'historique. Fermer avec Ctrl+Q.
+   envoyer uniquement celui-ci, puis le retrouver dans l'historique. Fermer avec ⌘L sur Mac.
 2. Lancer un agent de test dans Herdr. Dans un autre terminal, exécuter
    `/Users/jeremy/Documents/Github/herdr-drafts/run.sh`.
    La `.venv` de ce checkout est déjà préparée ; ailleurs, le lanceur prépare ses dépendances.
@@ -14,13 +14,15 @@ n'ont pas validé le comportement de vos versions de CLI pendant leur exécution
 4. Pendant que l'agent travaille, préparer trois messages. Vérifier qu'ils restent dans
    le panneau. Utiliser Entrée pour ajouter, et Maj+Entrée pour insérer une nouvelle ligne
    dans un message. Envoyer le deuxième seulement et observer le texte reçu, dont les nouvelles lignes.
-5. Garder un texte inachevé, cliquer sur Agents ou utiliser Ctrl+G, puis choisir un autre
-   agent. Revenir au premier : les deux messages restants et le texte inachevé doivent
-   être conservés. Fermer avec Ctrl+Q, relancer et vérifier de nouveau la restauration.
+   Vérifier ensuite ⌘Y sur Mac : seul le premier message restant doit être transmis.
+   Garder un texte dans le compositeur et vérifier qu'il reste présent après cet envoi.
+5. Garder un texte inachevé, cliquer sur Agents ou utiliser ⌘O sur Mac, puis choisir un autre
+   agent. Revenir au premier : le message restant et le texte inachevé doivent
+   être conservés. Fermer avec ⌘L sur Mac, relancer et vérifier de nouveau la restauration.
 6. Déclencher une demande interactive dans la conversation de test. Un envoi doit être
    refusé et conservé. Résoudre la demande dans le terminal de l'agent.
 7. Refaire les étapes 3–5 avec les autres CLI : Codex, Claude Code et Antigravity.
-8. Dans la liste, vérifier Ctrl+R et la mise à jour automatique après le lancement ou
+8. Dans la liste, vérifier ⌘R sur Mac et la mise à jour automatique après le lancement ou
    l'arrêt d'un agent. Une recherche sans résultat doit pouvoir être effacée. Tester
    `./run.sh --session default` si plusieurs sessions Herdr sont présentes.
 9. Pour tester aussi le panneau intégré, lier le plugin avec
@@ -29,5 +31,6 @@ n'ont pas validé le comportement de vos versions de CLI pendant leur exécution
    placement à droite. Fermer cette interface avant de choisir le même agent depuis
    le terminal autonome : les brouillons doivent être partagés.
 
+Les touches F2 (ajouter), F8 (suivant) et F10 (fermer) permettent aussi de vérifier le parcours.
 La démo simule les transmissions ; seul le parcours en session réelle confirme l'intégration
 du terminal, de la souris et de chaque CLI. Aucun changement de raccourci n'est nécessaire.
