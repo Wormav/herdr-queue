@@ -48,7 +48,8 @@ jobs:
         env:
           TARGET: ${{ matrix.target }}
         run: |
-          version=$(cargo pkgid | sed 's/.*#\(.*@\)\?//')
+          # Cargo supports both #VERSION and #PACKAGE@VERSION identifiers.
+          version=$(cargo pkgid | sed 's/.*#//;s/.*@//')
           archive="herdr-queue-v${version}-${TARGET}.tar.gz"
           mkdir -p package dist
           cp "target/${TARGET}/release/herdr-queue" LICENSE package/

@@ -13,9 +13,9 @@ closed with Ctrl+Q. Neither contacted an agent. Memory was collected from the ch
 
 | Measurement | Python 0.1.0 | Native Rust 0.2.0 |
 | --- | ---: | ---: |
-| Peak resident memory | 49.69 MiB | 4.77 MiB |
-| Total process CPU time, including startup | 0.3752 s | 0.0173 s |
-| Time until exit, including startup and shutdown | 7.56 s | 7.09 s |
+| Peak resident memory | 49.69 MiB | 4.64 MiB |
+| Total process CPU time, including startup | 0.3752 s | 0.0187 s |
+| Time until exit, including startup and shutdown | 7.56 s | 7.02 s |
 
 The measured native peak was about **90% lower**. The stripped macOS ARM64 executable
 was **1.82 MiB**. The release profile uses size optimization, link-time optimization,

@@ -1,5 +1,5 @@
 use crate::herdr::HerdrClient;
-use crate::models::{unique_id, Error, Result, Target};
+use crate::models::{unique_id, Agent, Error, Result, Target};
 use crate::service::DraftService;
 use crate::store::{DraftStore, PanelLock};
 use crate::ui;
@@ -272,6 +272,22 @@ fn doctor(environment: &HashMap<String, String>) -> Result<()> {
     Ok(())
 }
 
+fn run_terminal(
+    mut pick_agent: impl FnMut(&str) -> Result<Option<Agent>>,
+    mut open_queue: impl FnMut(Agent) -> Result<bool>,
+) -> Result<()> {
+    let mut notice = String::new();
+    while let Some(agent) = pick_agent(&notice)? {
+        match open_queue(agent) {
+            Ok(true) => notice.clear(),
+            Ok(false) => break,
+            Err(error) if error.code == "interrupted" => return Err(error),
+            Err(error) => notice = error.to_string(),
+        }
+    }
+    Ok(())
+}
+
 pub fn execute(command: Command, environment: &HashMap<String, String>) -> Result<()> {
     match command {
         Command::Version => println!("Herdr Queue {}", env!("CARGO_PKG_VERSION")),
@@ -295,14 +311,10 @@ pub fn execute(command: Command, environment: &HashMap<String, String>) -> Resul
             }
         }
         Command::Connect { session, socket } => {
-            let mut notice = String::new();
-            while let Some(agent) = ui::pick_agent(environment, session.as_deref(), socket.as_deref(), &notice)? {
-                match run_drafts(HerdrClient::new(agent.target.socket_path.clone()), agent.target, &state_directory(environment), None, true) {
-                    Ok(true) => notice.clear(),
-                    Ok(false) => break,
-                    Err(error) => notice = error.to_string(),
-                }
-            }
+            run_terminal(
+                |notice| ui::pick_agent(environment, session.as_deref(), socket.as_deref(), notice),
+                |agent| run_drafts(HerdrClient::new(agent.target.socket_path.clone()), agent.target, &state_directory(environment), None, true),
+            )?;
         }
     }
     Ok(())
@@ -316,6 +328,54 @@ mod tests {
 
     fn args(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
+    }
+
+    fn selected_agent() -> Agent {
+        Agent {
+            target: target(),
+            status: "idle".into(),
+            name: "Agent de test".into(),
+            workspace_label: String::new(),
+            tab_label: String::new(),
+            session_label: String::new(),
+        }
+    }
+
+    #[test]
+    fn interruption_terminates_standalone_without_reopening_the_picker() {
+        let mut selections = 0;
+        let result = run_terminal(
+            |_| {
+                selections += 1;
+                Ok((selections == 1).then(selected_agent))
+            },
+            |_| {
+                Err(Error {
+                    message: "Fermeture demandée.".into(),
+                    code: "interrupted".into(),
+                    uncertain: false,
+                })
+            },
+        );
+        assert_eq!(
+            selections, 1,
+            "An interruption must never reopen the picker"
+        );
+        assert_eq!(result.unwrap_err().code, "interrupted");
+    }
+
+    #[test]
+    fn queue_conflict_returns_to_the_picker_with_the_error_and_can_be_closed() {
+        let mut notices = Vec::new();
+        run_terminal(
+            |notice| {
+                notices.push(notice.to_owned());
+                Ok((notices.len() == 1).then(selected_agent))
+            },
+            |_| Err(Error::new("Un panneau est déjà ouvert pour cet agent.")),
+        )
+        .unwrap();
+        assert_eq!(notices, ["", "Un panneau est déjà ouvert pour cet agent."]);
     }
 
     #[test]

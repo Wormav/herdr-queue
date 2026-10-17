@@ -23,7 +23,8 @@ use std::collections::HashMap;
 use std::io::{self, Stdout};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::mpsc::{self, Receiver};
-use std::sync::Once;
+use std::sync::{Arc, Once};
+use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use tui_textarea::{CursorMove, TextArea, WrapMode};
 
@@ -362,7 +363,7 @@ impl QueueView {
                 _ => None,
             },
             Event::Key(key) => {
-                if key.code == KeyCode::Enter {
+                if key.code == KeyCode::Enter && !self.editor_focus && key.modifiers.is_empty() {
                     if let Some(action) = &self.focus_button {
                         return Some(action.clone());
                     }
@@ -418,6 +419,7 @@ impl QueueView {
                     }
                     KeyCode::Esc if !self.editor_focus => {
                         self.editor_focus = true;
+                        self.focus_button = None;
                         self.dirty = true;
                         None
                     }
@@ -931,6 +933,74 @@ extern "C" fn interrupt_terminal(_signal: libc::c_int) {
     INTERRUPTED.store(true, Ordering::Relaxed);
 }
 
+fn interrupted_error() -> Error {
+    Error {
+        message:
+            "Interface interrompue. Les textes sont conservés ; vérifiez tout envoi interrompu."
+                .into(),
+        code: "interrupted".into(),
+        uncertain: false,
+    }
+}
+
+fn check_interruption() -> Result<()> {
+    if INTERRUPTED.load(Ordering::Relaxed) {
+        Err(interrupted_error())
+    } else {
+        Ok(())
+    }
+}
+
+fn read_terminal_event() -> Result<Option<Event>> {
+    check_interruption()?;
+    let result = (|| -> io::Result<Option<Event>> {
+        if event::poll(Duration::from_millis(100))? {
+            Ok(Some(event::read()?))
+        } else {
+            Ok(None)
+        }
+    })();
+    check_interruption()?;
+    result.map_err(Error::from)
+}
+
+struct UiWorker<T> {
+    receiver: Receiver<T>,
+    thread: Option<JoinHandle<()>>,
+    cancelled: Arc<AtomicBool>,
+}
+
+impl<T: Send + 'static> UiWorker<T> {
+    fn spawn(
+        name: &str,
+        operation: impl FnOnce(&AtomicBool) -> T + Send + 'static,
+    ) -> Result<Self> {
+        let (sender, receiver) = mpsc::sync_channel(1);
+        let cancelled = Arc::new(AtomicBool::new(false));
+        let cancellation = cancelled.clone();
+        let thread = std::thread::Builder::new()
+            .name(name.into())
+            .spawn(move || {
+                let reply = operation(&cancellation);
+                let _ = sender.send(reply);
+            })?;
+        Ok(Self {
+            receiver,
+            thread: Some(thread),
+            cancelled,
+        })
+    }
+}
+
+impl<T> Drop for UiWorker<T> {
+    fn drop(&mut self) {
+        self.cancelled.store(true, Ordering::Relaxed);
+        if let Some(thread) = self.thread.take() {
+            let _ = thread.join();
+        }
+    }
+}
+
 fn restore_terminal() {
     let _ = disable_raw_mode();
     let _ = execute!(
@@ -951,6 +1021,7 @@ struct TerminalSession {
 
 impl TerminalSession {
     fn open() -> Result<Self> {
+        check_interruption()?;
         static PANIC_HOOK: Once = Once::new();
         PANIC_HOOK.call_once(|| {
             let previous = std::panic::take_hook();
@@ -961,7 +1032,6 @@ impl TerminalSession {
         });
         let terminal = Terminal::new(CrosstermBackend::new(io::stdout()))?;
         enable_raw_mode()?;
-        INTERRUPTED.store(false, Ordering::Relaxed);
         let session = Self {
             terminal,
             // The handlers only set an atomic flag; terminal restoration runs on the UI thread.
@@ -1009,6 +1079,7 @@ pub fn run_queue(
     panel_id: Option<String>,
     allow_switch: bool,
 ) -> Result<bool> {
+    check_interruption()?;
     let mut app = QueueApp::new(service, allow_switch)?;
     let mut session = TerminalSession::open()?;
     let mut worker = Some(queue_worker(&app.service, panel_id.clone(), None)?);
@@ -1016,16 +1087,22 @@ pub fn run_queue(
     let mut next_refresh = Instant::now() + Duration::from_secs(3);
     loop {
         if INTERRUPTED.load(Ordering::Relaxed) {
-            app.persist()?;
-            return Err(Error::new("Interface interrompue. Les textes sont conservés ; vérifiez tout envoi interrompu."));
+            let mut error = interrupted_error();
+            if let Err(save_error) = app.persist() {
+                error
+                    .message
+                    .push_str(&format!(" Sauvegarde finale impossible : {save_error}."));
+            }
+            return Err(error);
         }
         if let Some(receiver) = &worker {
-            match receiver.try_recv() {
+            match receiver.receiver.try_recv() {
                 Ok(reply) => {
                     worker = None;
                     app.reply(reply)?;
                     next_refresh = Instant::now() + Duration::from_secs(3);
                     if let Some(id) = pending_send.take() {
+                        check_interruption()?;
                         worker = Some(queue_worker(&app.service, None, Some(id))?);
                     }
                 }
@@ -1039,6 +1116,7 @@ pub fn run_queue(
             }
         }
         if worker.is_none() && !app.view.busy && Instant::now() >= next_refresh {
+            check_interruption()?;
             worker = Some(queue_worker(&app.service, panel_id.clone(), None)?);
             next_refresh = Instant::now() + Duration::from_secs(3);
         }
@@ -1048,11 +1126,11 @@ pub fn run_queue(
                 .draw(|frame| draw_queue(frame, &mut app.view, &app.service.target))?;
             app.view.dirty = false;
         }
-        if !event::poll(Duration::from_millis(100))? {
+        let Some(event) = read_terminal_event()? else {
             continue;
-        }
+        };
         let before = app.view.body();
-        let action = app.view.event(event::read()?);
+        let action = app.view.event(event);
         if app.view.body() != before {
             if let Err(error) = app.persist() {
                 app.view.notify(format!(
@@ -1061,6 +1139,7 @@ pub fn run_queue(
             }
         }
         if let Some(action) = action {
+            check_interruption()?;
             match app.action(action) {
                 Ok(QueueOutcome::Continue) => {}
                 Ok(QueueOutcome::Close(switch)) => return Ok(switch),
@@ -1082,18 +1161,26 @@ fn inventory_worker(
     env: HashMap<String, String>,
     session: Option<String>,
     socket: Option<String>,
-) -> Result<Receiver<(Vec<Agent>, Vec<String>)>> {
-    let (sender, receiver) = mpsc::sync_channel(1);
-    std::thread::Builder::new()
-        .name("herdr-agent-inventory".into())
-        .spawn(move || {
-            let inventory = match discover_sessions(&env, session.as_deref(), socket.as_deref()) {
-                Ok(sessions) => load_agents(&sessions),
-                Err(error) => (Vec::new(), vec![error.to_string()]),
-            };
-            let _ = sender.send(inventory);
-        })?;
-    Ok(receiver)
+) -> Result<UiWorker<(Vec<Agent>, Vec<String>)>> {
+    UiWorker::spawn(
+        "herdr-agent-inventory",
+        move |cancelled| match discover_sessions(&env, session.as_deref(), socket.as_deref()) {
+            Ok(sessions) => {
+                let mut agents = Vec::new();
+                let mut errors = Vec::new();
+                for session in &sessions {
+                    if cancelled.load(Ordering::Relaxed) {
+                        break;
+                    }
+                    let (mut inventory, mut failures) = load_agents(std::slice::from_ref(session));
+                    agents.append(&mut inventory);
+                    errors.append(&mut failures);
+                }
+                (agents, errors)
+            }
+            Err(error) => (Vec::new(), vec![error.to_string()]),
+        },
+    )
 }
 
 pub fn pick_agent(
@@ -1113,10 +1200,10 @@ pub fn pick_agent(
     let mut next_refresh = Instant::now() + Duration::from_secs(5);
     loop {
         if INTERRUPTED.load(Ordering::Relaxed) {
-            return Ok(None);
+            return Err(interrupted_error());
         }
         if let Some(receiver) = &worker {
-            match receiver.try_recv() {
+            match receiver.receiver.try_recv() {
                 Ok((agents, errors)) => {
                     worker = None;
                     view.inventory(agents, errors);
@@ -1133,6 +1220,7 @@ pub fn pick_agent(
             }
         }
         if worker.is_none() && Instant::now() >= next_refresh {
+            check_interruption()?;
             worker = Some(inventory_worker(
                 env.clone(),
                 session.map(str::to_owned),
@@ -1148,8 +1236,9 @@ pub fn pick_agent(
                 .draw(|frame| draw_picker(frame, &mut view))?;
             view.dirty = false;
         }
-        if event::poll(Duration::from_millis(100))? {
-            match view.event(event::read()?) {
+        if let Some(event) = read_terminal_event()? {
+            check_interruption()?;
+            match view.event(event) {
                 Some(PickerAction::Quit) => return Ok(None),
                 Some(PickerAction::Choose(index)) => return Ok(view.agents.get(index).cloned()),
                 Some(PickerAction::Refresh) if worker.is_none() => {
@@ -1189,14 +1278,21 @@ fn queue_worker(
     service: &DraftService,
     panel_id: Option<String>,
     send: Option<String>,
-) -> Result<Receiver<QueueReply>> {
+) -> Result<UiWorker<QueueReply>> {
     let path = service.store.path.clone();
     let client = service.client.clone();
     let target = service.target.clone();
-    let (sender, receiver) = mpsc::sync_channel(1);
-    std::thread::Builder::new().name("herdr-queue-request".into()).spawn(move || {
-        let service = DraftStore::open(&path).and_then(|store| DraftService::new(store, client, target.clone()));
-        let reply = match service {
+    UiWorker::spawn("herdr-queue-request", move |cancelled| {
+        if cancelled.load(Ordering::Relaxed) {
+            return if send.is_some() {
+                QueueReply::Sent(Err(interrupted_error()), target)
+            } else {
+                QueueReply::Refreshed(Err(interrupted_error()), target)
+            };
+        }
+        let service = DraftStore::open(&path)
+            .and_then(|store| DraftService::new(store, client, target.clone()));
+        match service {
             Ok(mut service) => {
                 if let Some(id) = send {
                     let result = service.send(&id);
@@ -1210,6 +1306,9 @@ fn queue_worker(
                                 },"ttl_ms":10000
                             }))?;
                         }
+                        if cancelled.load(Ordering::Relaxed) {
+                            return Err(interrupted_error());
+                        }
                         service.refresh()
                     })();
                     QueueReply::Refreshed(result, service.target)
@@ -1217,10 +1316,8 @@ fn queue_worker(
             }
             Err(error) if send.is_some() => QueueReply::Sent(Err(error), target),
             Err(error) => QueueReply::Refreshed(Err(error), target),
-        };
-        let _ = sender.send(reply);
-    })?;
-    Ok(receiver)
+        }
+    })
 }
 
 impl QueueApp {
@@ -2260,6 +2357,7 @@ mod tests {
         let id = queue.app.view.drafts[1].id.clone();
         let receiver = queue_worker(&queue.app.service, None, Some(id.clone())).unwrap();
         let QueueReply::Sent(result, target) = receiver
+            .receiver
             .recv_timeout(std::time::Duration::from_secs(2))
             .unwrap()
         else {
@@ -2305,6 +2403,7 @@ mod tests {
         .unwrap();
         let receiver = queue_worker(&service, Some("draft-panel".into()), None).unwrap();
         let QueueReply::Refreshed(result, _) = receiver
+            .receiver
             .recv_timeout(std::time::Duration::from_secs(2))
             .unwrap()
         else {
@@ -2586,5 +2685,200 @@ mod tests {
         }));
         assert_eq!(view.selected, 1);
         assert_eq!(view.body(), body);
+    }
+
+    #[test]
+    fn escape_from_send_button_restores_composer_enter_and_shift_enter_without_sending() {
+        use ratatui::{backend::TestBackend, Terminal};
+        for newline in [false, true] {
+            let mut queue = TestQueue::new();
+            queue.app.view.set_composer("ancien message", None);
+            queue.app.action(QueueAction::Save).unwrap();
+            let mut terminal = Terminal::new(TestBackend::new(120, 40)).unwrap();
+            terminal
+                .draw(|frame| draw_queue(frame, &mut queue.app.view, &target()))
+                .unwrap();
+            for _ in 0..3 {
+                assert_eq!(
+                    queue
+                        .app
+                        .view
+                        .event(Event::Key(KeyEvent::new(KeyCode::Tab, KeyModifiers::NONE))),
+                    None
+                );
+            }
+            assert!(matches!(
+                queue.app.view.focus_button,
+                Some(QueueAction::Send(_))
+            ));
+            queue
+                .app
+                .view
+                .event(Event::Key(KeyEvent::new(KeyCode::Esc, KeyModifiers::NONE)));
+            for character in "nouveau texte".chars() {
+                assert_eq!(
+                    queue.app.view.event(Event::Key(KeyEvent::new(
+                        KeyCode::Char(character),
+                        KeyModifiers::NONE
+                    ))),
+                    None
+                );
+            }
+            let action = queue.app.view.event(Event::Key(KeyEvent::new(
+                KeyCode::Enter,
+                if newline {
+                    KeyModifiers::SHIFT
+                } else {
+                    KeyModifiers::NONE
+                },
+            )));
+            if newline {
+                assert_eq!(action, None);
+                assert_eq!(queue.app.view.body(), "nouveau texte\n");
+                assert_eq!(queue.app.view.drafts.len(), 1);
+            } else {
+                assert_eq!(action, Some(QueueAction::Save));
+                assert_eq!(
+                    queue.app.action(action.unwrap()).unwrap(),
+                    QueueOutcome::Continue
+                );
+                assert_eq!(
+                    queue
+                        .app
+                        .view
+                        .drafts
+                        .iter()
+                        .map(|draft| draft.body.as_str())
+                        .collect::<Vec<_>>(),
+                    vec!["ancien message", "nouveau texte"]
+                );
+            }
+            assert!(queue
+                .app
+                .service
+                .store
+                .list_drafts(&target(), true)
+                .unwrap()
+                .is_empty());
+            assert!(!queue.app.view.busy);
+        }
+    }
+
+    #[test]
+    fn dropping_refresh_worker_waits_for_its_identity_adoption_before_releasing_ownership() {
+        use crate::herdr::{test_support, HerdrClient};
+        use std::io::{BufRead, BufReader, Write};
+        use std::os::unix::net::UnixStream;
+        let queue = TestQueue::new();
+        let (connection, mut server) = UnixStream::pair().unwrap();
+        let (started_sender, started_receiver) = mpsc::sync_channel(1);
+        let (release_sender, release_receiver) = mpsc::sync_channel(1);
+        let server_thread = std::thread::spawn(move || {
+            let mut line = String::new();
+            BufReader::new(server.try_clone().unwrap())
+                .read_line(&mut line)
+                .unwrap();
+            let request: serde_json::Value = serde_json::from_str(&line).unwrap();
+            started_sender.send(()).unwrap();
+            release_receiver
+                .recv_timeout(Duration::from_secs(2))
+                .unwrap();
+            writeln!(server, "{}", serde_json::json!({"id":request["id"],"result":{"agent":test_support::agent_json()}})).unwrap();
+        });
+        let connection = std::sync::Mutex::new(Some(connection));
+        let client = HerdrClient::new("/tmp/herdr-test.sock")
+            .with_timeout(Duration::from_millis(500))
+            .with_connector(move |_, _| Ok(connection.lock().unwrap().take().unwrap()));
+        let mut initial = test_support::target();
+        initial.session = None;
+        let service = DraftService::new(
+            DraftStore::open(&queue.directory.join("ownership.sqlite3")).unwrap(),
+            client,
+            initial.clone(),
+        )
+        .unwrap();
+        service
+            .store
+            .save_composer(&initial, "conservé", None)
+            .unwrap();
+        let worker = queue_worker(&service, None, None).unwrap();
+        started_receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap();
+        let release_thread = std::thread::spawn(move || {
+            std::thread::sleep(Duration::from_millis(50));
+            release_sender.send(()).unwrap();
+        });
+        drop(worker);
+        let adopted_when_owner_returns = service.store.resolve_target(&initial).unwrap().session;
+        release_thread.join().unwrap();
+        server_thread.join().unwrap();
+        let deadline = Instant::now() + Duration::from_secs(1);
+        while service
+            .store
+            .resolve_target(&initial)
+            .unwrap()
+            .session
+            .is_none()
+            && Instant::now() < deadline
+        {
+            std::thread::yield_now();
+        }
+        assert_eq!(adopted_when_owner_returns, test_support::target().session);
+        assert_eq!(service.store.composer(&initial).unwrap().body, "conservé");
+    }
+
+    #[test]
+    fn interrupted_terminal_cannot_open_a_new_session_and_returns_a_distinct_error() {
+        struct ResetInterruption;
+        impl Drop for ResetInterruption {
+            fn drop(&mut self) {
+                INTERRUPTED.store(false, Ordering::Relaxed);
+            }
+        }
+        let _reset = ResetInterruption;
+        interrupt_terminal(libc::SIGTERM);
+        let error = TerminalSession::open()
+            .err()
+            .expect("interruption must prevent reopening");
+        assert_eq!(error.code, "interrupted");
+        assert!(INTERRUPTED.load(Ordering::Relaxed));
+        assert_eq!(read_terminal_event().unwrap_err().code, "interrupted");
+        assert!(INTERRUPTED.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn cancelled_inventory_worker_skips_sessions_after_discovery_returns() {
+        use std::os::unix::fs::PermissionsExt;
+        let queue = TestQueue::new();
+        let registry = serde_json::json!({"sessions":[
+            {"name":"first","socket_path":"/missing-first.sock","running":true},
+            {"name":"second","socket_path":"/missing-second.sock","running":true}
+        ]});
+        std::fs::write(queue.directory.join("registry.json"), registry.to_string()).unwrap();
+        let binary = queue.directory.join("registry");
+        std::fs::write(
+            &binary,
+            b"#!/bin/sh\nsleep 0.05\ncat \"$(dirname \"$0\")/registry.json\"\n",
+        )
+        .unwrap();
+        std::fs::set_permissions(&binary, std::fs::Permissions::from_mode(0o700)).unwrap();
+        let worker = inventory_worker(
+            HashMap::from([(
+                "HERDR_BIN_PATH".into(),
+                binary.to_string_lossy().into_owned(),
+            )]),
+            None,
+            None,
+        )
+        .unwrap();
+        worker.cancelled.store(true, Ordering::Relaxed);
+        let (agents, errors) = worker
+            .receiver
+            .recv_timeout(Duration::from_secs(2))
+            .unwrap();
+        drop(worker);
+        assert!(agents.is_empty());
+        assert!(errors.is_empty());
     }
 }

@@ -92,7 +92,7 @@ The demo uses temporary drafts and simulates every send.
 
 ## Resource use
 
-On macOS Apple Silicon, the native release used **4.77 MiB peak resident memory** in the
+On macOS Apple Silicon, the native release used **4.64 MiB peak resident memory** in the
 two-message demo, compared with **49.69 MiB** for the previous Python version in the same
 scenario. The executable is **1.82 MiB**. These are local measurements, not a memory limit;
 large queues and longer sessions can use more. See the [benchmark method](docs/PERFORMANCE.md).

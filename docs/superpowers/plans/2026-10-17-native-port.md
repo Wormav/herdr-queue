@@ -90,4 +90,4 @@ Les archives publiées contiennent ce binaire et leurs empreintes SHA-256.
 - [x] Exécuter `cargo test`, `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`.
 - [x] Tester une base Python existante et le démarrage du binaire sans Python/uv.
 - [x] Construire en release et comparer le pic RSS sur la même démo 120×40 de sept secondes.
-- [ ] Effectuer une revue indépendante puis corriger les défauts importants avant livraison.
+- [x] Effectuer une revue indépendante puis corriger les défauts importants avant livraison.
