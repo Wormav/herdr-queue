@@ -1,0 +1,21 @@
+id = "herdr-drafts"
+name = "Herdr Drafts"
+version = "0.1.0"
+description = "Prepare several messages beside your agent and send each one when ready."
+min_herdr_version = "0.9.3"
+platforms = ["macos", "linux"]
+
+[[build]]
+command = ["uv", "sync", "--frozen", "--no-dev"]
+
+[[actions]]
+id = "open"
+title = "Ouvrir les brouillons"
+contexts = ["pane"]
+command = ["sh", "run.sh", "open"]
+
+[[panes]]
+id = "drafts"
+title = "Brouillons"
+placement = "split"
+command = ["sh", "run.sh", "tui"]
