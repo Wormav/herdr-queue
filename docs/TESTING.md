@@ -12,7 +12,8 @@ n'ont pas validé le comportement de vos versions de CLI pendant leur exécution
    l'agent avec Entrée ou un clic. Vérifier le destinataire au-dessus des brouillons et
    leur affichage dans le terminal de lancement.
 4. Pendant que l'agent travaille, préparer trois messages. Vérifier qu'ils restent dans
-   le panneau. Envoyer le deuxième seulement et observer le texte reçu, dont les nouvelles lignes.
+   le panneau. Utiliser Entrée pour ajouter, et Maj+Entrée pour insérer une nouvelle ligne
+   dans un message. Envoyer le deuxième seulement et observer le texte reçu, dont les nouvelles lignes.
 5. Garder un texte inachevé, cliquer sur Agents ou utiliser Ctrl+G, puis choisir un autre
    agent. Revenir au premier : les deux messages restants et le texte inachevé doivent
    être conservés. Fermer avec Ctrl+Q, relancer et vérifier de nouveau la restauration.

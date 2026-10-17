@@ -49,9 +49,24 @@ async def test_click_sends_only_the_chosen_message(app, fake_herdr):
 
 async def test_editor_autosaves_even_before_adding(app):
     async with app.run_test() as pilot:
-        await pilot.press("b", "o", "n", "j", "o", "u", "r", "enter", "a")
+        await pilot.press("b", "o", "n", "j", "o", "u", "r", "shift+enter", "a")
         await pilot.pause()
         assert app.service.store.composer(app.service.target).body == "bonjour\na"
+        assert app.service.store.list_drafts(app.service.target) == []
+
+
+async def test_enter_adds_messages_to_the_list_without_sending_them(app, fake_herdr):
+    async with app.run_test(size=(60, 40)) as pilot:
+        await pilot.press("p", "r", "e", "m", "i", "e", "r", "enter")
+        await pilot.press("s", "e", "c", "o", "n", "d", "enter", "enter")
+        await pilot.pause()
+        assert [draft.body for draft in app.service.store.list_drafts(app.service.target)] == [
+            "premier",
+            "second",
+        ]
+        assert app.query_one("#composer", TextArea).text == ""
+        assert app.query_one("#composer", TextArea).has_focus
+        assert fake_herdr.prompts == []
 
 
 async def test_edit_and_reorder_with_mouse(app):

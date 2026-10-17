@@ -65,3 +65,12 @@
   une couleur RVB connue et échouent avec le fond natif. Le focus utilise l'inversion.
 - Validation : 76 tests réussis, Ruff et mypy sans erreur. Démo et sélecteur lancés dans
   un PTY avec une configuration Ghostty : fonds natifs, aucun fond RVB émis, sortie Ctrl+Q.
+
+## Ajout avec Entrée — 17 octobre 2026
+
+- Entrée dans le compositeur ajoute le texte à la liste ou enregistre son édition.
+  Maj+Entrée insère une nouvelle ligne ; Ctrl+S reste disponible.
+- Le raccourci appartient au compositeur : les boutons et les confirmations conservent
+  leur navigation au clavier. L'ajout réutilise la sauvegarde existante et ne transmet
+  aucun prompt à l'agent.
+- Validation : 77 tests réussis, Ruff et mypy sans erreur, archives reconstruites.

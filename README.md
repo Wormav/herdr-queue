@@ -81,8 +81,8 @@ Vérifiez avec `herdr config check`, puis rechargez avec `herdr server reload-co
 
 | Action | Souris ou clavier |
 | --- | --- |
-| Écrire plusieurs lignes | Entrée insère une nouvelle ligne |
-| Ajouter ou enregistrer une modification | Bouton principal ou **Ctrl+S** |
+| Écrire plusieurs lignes | **Maj+Entrée** insère une nouvelle ligne |
+| Ajouter ou enregistrer une modification | **Entrée** dans l'éditeur, bouton principal ou **Ctrl+S** |
 | Envoyer un message précis | **Envoyer** sur ce message |
 | Préparer un nouveau texte | **Nouveau** ou **Ctrl+N**, avec confirmation si nécessaire |
 | Retrouver les messages transmis | **Historique** |

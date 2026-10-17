@@ -28,6 +28,16 @@ STATUS_LABELS = {
 }
 
 
+class DraftComposer(TextArea):
+    BINDINGS = [
+        Binding("enter", "app.save", "Ajouter", show=False, priority=True),
+        Binding("shift+enter", "newline", "Nouvelle ligne", show=False, priority=True),
+    ]
+
+    def action_newline(self) -> None:
+        self.replace("\n", *self.selection, maintain_selection_offset=False)
+
+
 class Confirm(ModalScreen[bool]):
     BINDINGS = [Binding("escape", "cancel", show=False)]
 
@@ -172,7 +182,7 @@ class DraftsApp(App[bool]):
         yield Static(target.cwd or "Agent sélectionné", id="directory", markup=False)
         yield Static("Démo : aucun agent connecté" if self.demo else "Connexion…", id="agent-state")
         yield Static("Écrire un message", id="composer-title")
-        yield TextArea(
+        yield DraftComposer(
             self.service.store.composer(target).body,
             id="composer",
             soft_wrap=True,
@@ -213,7 +223,7 @@ class DraftsApp(App[bool]):
         self.query_one("#composer-hint", Static).update(
             f"{len(body.encode('utf-8')):,} / 65 536 octets  ·  sauvegardé"
             if body
-            else "Entrée : nouvelle ligne   Ctrl+S : ajouter"
+            else "Entrée : ajouter   Maj+Entrée : nouvelle ligne"
         )
 
     def _persist_composer(self) -> bool:
