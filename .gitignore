@@ -8,6 +8,7 @@ dist/
 .superpowers/
 *.sqlite3*
 *.svg
+!desktop/mods/herdr-queue/queue.svg
 .DS_Store
 /target/
 /bin/

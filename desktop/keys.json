@@ -1,0 +1,5 @@
+{
+  "layout:main-queue": {
+    "cmd-i": "tabs-queue.open_queue"
+  }
+}

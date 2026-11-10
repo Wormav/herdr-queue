@@ -1,5 +1,7 @@
 # Herdr Queue
 
+For **Herdr Desktop**, see the [Desktop installation and controls](desktop/README.md).
+
 Draft, queue, and send prompts to your AI coding agents from a dedicated terminal panel.
 
 Write your next prompts while your agent is working. Keep them in a list, edit or reorder
