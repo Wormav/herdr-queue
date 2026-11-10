@@ -1,5 +1,9 @@
 # Herdr Queue pour Desktop
 
+![Aperçu de Herdr Queue dans l'application Desktop](preview.png)
+
+La [recette de la galerie](RECIPE.md) décrit la disposition et les deux mods nécessaires pour la reproduire.
+
 Ce port ajoute un bouton **Queue** à droite de **Changes** dans une copie personnelle de la disposition Herdr. Le bouton ouvre un panneau à droite de l'agent de l'onglet actif. Il conserve les brouillons, l'ordre, le texte en cours et l'historique dans l'état local de Herdr Desktop (`~/.config/herdr-app/shared.json`, clé `herdr-queue.desktop`). L'envoi reste manuel. Un accusé de réception perdu bloque le renvoi jusqu'à ce que l'utilisateur marque le message comme transmis ou le remette en brouillon.
 
 Le port utilise `hc send` pour transmettre le texte au terminal Herdr Core. Le mod exécute donc le programme local `hc` et lit les métadonnées des agents du Desktop. Il ne contacte aucun serveur externe. Les données SQLite de l'extension TUI restent dans `~/.local/state/herdr/plugins/herdr-drafts/drafts.sqlite3` ; elles ne sont pas associées automatiquement aux terminaux du nouveau Core, dont les identifiants diffèrent.

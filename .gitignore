@@ -9,6 +9,9 @@ dist/
 *.sqlite3*
 *.svg
 !desktop/mods/herdr-queue/queue.svg
+desktop/mods/*/gpui-kit.d.ts
+desktop/mods/*/herdr.d.ts
+desktop/mods/*/jsconfig.json
 .DS_Store
 /target/
 /bin/
